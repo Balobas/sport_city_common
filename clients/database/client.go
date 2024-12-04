@@ -18,7 +18,7 @@ type QueryExecer interface {
 }
 
 type Transactor interface {
-	BeginTxWithContext(ctx context.Context) (context.Context, common.Transaction, error)
+	BeginTxWithContext(ctx context.Context, isolationLevel string) (context.Context, common.Transaction, error)
 }
 
 type DB interface {

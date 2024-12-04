@@ -20,15 +20,19 @@ func NewTxManager(pgClient clientDB.ClientDB) *Manager {
 }
 
 type Tx struct {
-	transactors []Transactor
+	transactors    []Transactor
+	isolationLevel string
 }
 
-func (m *Manager) NewPgTransaction() Tx {
-	return m.NewTransaction(m.pgClient.DB())
+func (m *Manager) NewPgTransaction(isolationLevel string) Tx {
+	return m.NewTransaction(isolationLevel, m.pgClient.DB())
 }
 
-func (m *Manager) NewTransaction(transactors ...Transactor) Tx {
-	return Tx{transactors: transactors}
+func (m *Manager) NewTransaction(isolationLevel string, transactors ...Transactor) Tx {
+	return Tx{
+		transactors:    transactors,
+		isolationLevel: isolationLevel,
+	}
 }
 
 func (tx Tx) Execute(ctx context.Context, f func(ctx context.Context) error) (err error) {
@@ -39,7 +43,7 @@ func (tx Tx) Execute(ctx context.Context, f func(ctx context.Context) error) (er
 	for _, tr := range tx.transactors {
 		var internalTx common.Transaction
 
-		ctxTx, internalTx, err = tr.BeginTxWithContext(ctx)
+		ctxTx, internalTx, err = tr.BeginTxWithContext(ctx, tx.isolationLevel)
 		if err != nil {
 			return errors.WithStack(errors.Wrap(err, "failed to begin internal tx"))
 		}

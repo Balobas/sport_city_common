@@ -68,13 +68,13 @@ func (p *pg) Close() {
 	p.pool.Close()
 }
 
-func (p *pg) BeginTxWithContext(ctx context.Context) (context.Context, common.Transaction, error) {
+func (p *pg) BeginTxWithContext(ctx context.Context, isolationLevel string) (context.Context, common.Transaction, error) {
 	if tx, ok := ctx.Value(TxKey{}).(pgx.Tx); ok {
 		log.Printf("pg: tx already exist in ctx")
 		return ctx, tx, nil
 	}
 
-	tx, err := p.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
+	tx, err := p.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.TxIsoLevel(isolationLevel)})
 	if err != nil {
 		log.Printf("failed to begin tx")
 		return ctx, nil, errors.Wrap(err, "failed to begin tx")
