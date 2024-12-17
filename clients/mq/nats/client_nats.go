@@ -6,6 +6,7 @@ import (
 
 	mqClient "github.com/balobas/sport_city_common/clients/mq"
 	nats "github.com/nats-io/nats.go"
+	"github.com/pkg/errors"
 )
 
 type Config interface {
