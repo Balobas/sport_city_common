@@ -10,12 +10,12 @@ import (
 )
 
 type Manager struct {
-	pgClient clientDB.ClientDB
+	dbc clientDB.ClientDB
 }
 
-func NewTxManager(pgClient clientDB.ClientDB) *Manager {
+func NewTxManager(client clientDB.ClientDB) *Manager {
 	return &Manager{
-		pgClient: pgClient,
+		dbc: client,
 	}
 }
 
@@ -24,10 +24,48 @@ type Tx struct {
 	isolationLevel string
 }
 
-func (m *Manager) NewPgTransaction(isolationLevel string) Tx {
-	return m.NewTransaction(isolationLevel, m.pgClient.DB())
+func (m *Manager) ExecuteTx(ctx context.Context, isolationLevel string, f func(ctx context.Context) error) (err error) {
+	log.Printf("txManager: execute tx call")
+
+	ctxTx, tx, err := m.dbc.DB().BeginTxWithContext(ctx, isolationLevel)
+	if err != nil {
+		return errors.WithStack(errors.Wrap(err, "failed to begin tx"))
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("panic recovered")
+			err = errors.Wrapf(err, "panic recovered: %v", r)
+		}
+
+		if err != nil {
+			if rollbackErr := tx.Rollback(ctxTx); rollbackErr != nil {
+				err = errors.Wrapf(err, "rollback error: %v", rollbackErr)
+			}
+
+			log.Printf("rollback tx")
+			return
+		}
+
+		if commitErr := tx.Commit(ctxTx); commitErr != nil {
+			err = errors.Wrapf(err, "commit error: %v", commitErr)
+		}
+		log.Printf("commit tx")
+	}()
+
+	if err := f(ctxTx); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
 }
 
+// Deprecated
+func (m *Manager) NewPgTransaction(isolationLevel string) Tx {
+	return m.NewTransaction(isolationLevel, m.dbc.DB())
+}
+
+// Deprecated
 func (m *Manager) NewTransaction(isolationLevel string, transactors ...Transactor) Tx {
 	return Tx{
 		transactors:    transactors,
@@ -35,11 +73,13 @@ func (m *Manager) NewTransaction(isolationLevel string, transactors ...Transacto
 	}
 }
 
+// Deprecated
 func (tx Tx) Execute(ctx context.Context, f func(ctx context.Context) error) (err error) {
 	log.Printf("txManager: execute tx call")
 	internalTransactions := make([]common.Transaction, 0, len(tx.transactors))
 
 	ctxTx := ctx
+	// TODO: перенести дефер сюда, чтобы в случае нескольких реп, это соответствовало реализации 2PC
 	for _, tr := range tx.transactors {
 		var internalTx common.Transaction
 
