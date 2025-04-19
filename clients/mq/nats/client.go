@@ -2,18 +2,22 @@ package natsClient
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"strings"
+	"sync"
+	"time"
 
 	mqClient "github.com/balobas/sport_city_common/clients/mq"
 	"github.com/nats-io/nats.go"
-	"github.com/pkg/errors"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/pkg/errors"
 )
 
 type Config interface {
 	NatsUrl() string
 	NatsClientName() string
-	UsersStreamName() string
+	ServiceName() string
 }
 
 type NatsClientPubSub struct {
@@ -92,18 +96,26 @@ func nackWithLog(msg *nats.Msg) {
 	}
 }
 
-
-
 type NatsClientJetStream struct {
+	cfg           Config
 	conn          *nats.Conn
 	js            jetstream.JetStream
 	consumersCtxs []jetstream.ConsumeContext
+
+	wg        *sync.WaitGroup
+	connected chan struct{}
 }
 
 func NewJs(ctx context.Context, cfg Config) (mqClient.MqClient, error) {
+	connectedChan := make(chan struct{})
+
 	conn, err := nats.Connect(
 		cfg.NatsUrl(), nats.Name(cfg.NatsClientName()),
 		nats.ReconnectHandler(func(c *nats.Conn) {
+			select {
+			case connectedChan <- struct{}{}:
+			default:
+			}
 			log.Printf("nats has been recconected")
 		}),
 		nats.ErrorHandler(func(c *nats.Conn, s *nats.Subscription, err error) {
@@ -115,7 +127,13 @@ func NewJs(ctx context.Context, cfg Config) (mqClient.MqClient, error) {
 		nats.ClosedHandler(func(c *nats.Conn) {
 			log.Printf("nats closed")
 		}),
+		nats.MaxReconnects(-1),
 		nats.ConnectHandler(func(c *nats.Conn) {
+
+			select {
+			case connectedChan <- struct{}{}:
+			default:
+			}
 			log.Printf("nats successfully connected to %s", c.ConnectedAddr())
 		}),
 		nats.RetryOnFailedConnect(true),
@@ -132,22 +150,12 @@ func NewJs(ctx context.Context, cfg Config) (mqClient.MqClient, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	// js.Stream(ctx, cfg.UsersStreamName())
-
-	// _, err = js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
-	// 	Name:     cfg.UsersStreamName(),
-	// 	Subjects: []string{},
-	// 	Storage:  jetstream.FileStorage,
-	// })
-	// if err != nil {
-	// 	conn.Close()
-	// 	log.Printf("failed to createOrUpdate nats stream %s: %v", cfg.UsersStreamName(), err)
-	// 	return nil, errors.WithStack(err)
-	// }
-
 	return &NatsClientJetStream{
-		conn: conn,
-		js:   js,
+		cfg:       cfg,
+		conn:      conn,
+		js:        js,
+		wg:        &sync.WaitGroup{},
+		connected: connectedChan,
 	}, nil
 }
 
@@ -162,33 +170,36 @@ func (nc *NatsClientJetStream) Publish(ctx context.Context, subj string, data []
 }
 
 func (nc *NatsClientJetStream) Subscribe(ctx context.Context, handlersStreams map[string]map[string]mqClient.MqMsgHandler) error {
+	failedStreams := map[string]map[string]mqClient.MqMsgHandler{}
+
+	defer nc.resubscribeOnFailedStreams(ctx, failedStreams)
 
 	for streamName, handlers := range handlersStreams {
+
+		stream, err := nc.js.Stream(ctx, streamName)
+		if err != nil {
+			log.Printf("failed to get stream %s: %v", streamName, err)
+			failedStreams[streamName] = handlers
+			continue
+		}
+
 		for subject, handler := range handlers {
 
-			stream, err := nc.js.Stream(ctx, streamName)
+			consumerName := fmt.Sprintf("%s_%s_consumer", nc.cfg.ServiceName(), strings.Split(subject, ".")[1])
+			consumer, err := stream.Consumer(ctx, consumerName)
 			if err != nil {
-				log.Printf("failed to get stream %s: %v", streamName, err)
-				return errors.WithStack(err)
-			}
-
-			consumer, err := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
-				Name:          subject + "_consumer",
-				DeliverPolicy: jetstream.DeliverAllPolicy,
-				AckPolicy:     jetstream.AckExplicitPolicy,
-				FilterSubject: subject,
-			})
-			if err != nil {
-				log.Printf("failed to create consumer on stream %s subject %s: %v", streamName, subject, err)
-				return errors.WithStack(err)
+				log.Printf("failed to get consumer %s on stream %s subject %s: %v", consumerName, streamName, subject, err)
+				addSubjectToFailedStreams(streamName, subject, handler, failedStreams)
+				continue
 			}
 
 			consumerCtx, err := consumer.Consume(convertToNatsJsMsgHandler(ctx, handler))
 			if err != nil {
-				log.Printf("failed to init consumer on stream %s subject %s: %v", streamName, subject, err)
-				return errors.WithStack(err)
+				log.Printf("failed to init consumer %s on stream %s subject %s: %v", consumerName, streamName, subject, err)
+				addSubjectToFailedStreams(streamName, subject, handler, failedStreams)
+				continue
 			}
-			log.Printf("successfully init consumer on stream %s subject %s", streamName, subject)
+			log.Printf("successfully init consumer %s on stream %s subject %s", consumerName, streamName, subject)
 
 			nc.consumersCtxs = append(nc.consumersCtxs, consumerCtx)
 		}
@@ -197,11 +208,65 @@ func (nc *NatsClientJetStream) Subscribe(ctx context.Context, handlersStreams ma
 	return nil
 }
 
+func addSubjectToFailedStreams(
+	streamName string,
+	subject string,
+	handler mqClient.MqMsgHandler,
+	failedStreams map[string]map[string]mqClient.MqMsgHandler,
+) {
+	failedStream, ok := failedStreams[streamName]
+	if !ok {
+		failedStreams[streamName] = map[string]mqClient.MqMsgHandler{
+			subject: handler,
+		}
+	} else {
+		failedStream[subject] = handler
+	}
+}
+
+func (nc *NatsClientJetStream) resubscribeOnFailedStreams(ctx context.Context, failedStreams map[string]map[string]mqClient.MqMsgHandler) {
+	if len(failedStreams) == 0 {
+		return
+	}
+
+	nc.wg.Add(1)
+	go func() {
+		defer nc.wg.Done()
+
+		select {
+		case <-ctx.Done():
+			log.Printf("stop attempts to init failed consumers")
+			return
+		case <-nc.connected:
+			select {
+			case <-ctx.Done():
+				log.Printf("stop attempts to init failed consumers")
+				return
+			default:
+			}
+
+			nc.Subscribe(ctx, failedStreams)
+		case <-time.After(1 * time.Minute):
+			select {
+			case <-ctx.Done():
+				log.Printf("stop attempts to init failed consumers")
+				return
+			default:
+			}
+
+			nc.Subscribe(ctx, failedStreams)
+		}
+	}()
+}
+
 func (nc *NatsClientJetStream) Close(ctx context.Context) error {
 	for _, consumerCtx := range nc.consumersCtxs {
 		consumerCtx.Stop()
 	}
 	nc.conn.Close()
+	nc.wg.Wait()
+	close(nc.connected)
+	log.Printf("nats js client closed successfully")
 	return nil
 }
 
