@@ -102,7 +102,7 @@ type NatsClientJetStream struct {
 	js            jetstream.JetStream
 	consumersCtxs []jetstream.ConsumeContext
 
-	opts *NatsClientJsOpts
+	opts NatsClientJsOpts
 
 	wg        *sync.WaitGroup
 	connected chan struct{}
@@ -180,7 +180,7 @@ func NewJs(ctx context.Context, cfg Config, opts ...NatsClientJetStreamOption) (
 	}
 
 	for _, opt := range opts {
-		opt.Apply(nc.opts)
+		opt.Apply(&nc.opts)
 	}
 
 	return nc, nil
