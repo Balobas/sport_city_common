@@ -169,10 +169,14 @@ func (nc *NatsClientJetStream) Publish(ctx context.Context, subj string, data []
 	return nil
 }
 
-func (nc *NatsClientJetStream) Subscribe(ctx context.Context, handlersStreams map[string]map[string]mqClient.MqMsgHandler) error {
+func (nc *NatsClientJetStream) Subscribe(ctx context.Context, handlersStreams map[string]map[string]mqClient.MqMsgHandler) (subErr error) {
 	failedStreams := map[string]map[string]mqClient.MqMsgHandler{}
 
-	defer nc.resubscribeOnFailedStreams(ctx, failedStreams)
+	defer func() {
+		if subErr == nil {
+			nc.resubscribeOnFailedStreams(ctx, failedStreams)
+		}
+	}()
 
 	for streamName, handlers := range handlersStreams {
 
@@ -184,6 +188,12 @@ func (nc *NatsClientJetStream) Subscribe(ctx context.Context, handlersStreams ma
 		}
 
 		for subject, handler := range handlers {
+
+			subjectParts := strings.Split(subject, ".")
+			if len(subjectParts) != 2 {
+				log.Printf("invalid message subject %s", subject)
+				return errors.Errorf("invalid message subject %s", subject)
+			}
 
 			consumerName := fmt.Sprintf("%s_%s_consumer", nc.cfg.ServiceName(), strings.Split(subject, ".")[1])
 			consumer, err := stream.Consumer(ctx, consumerName)
