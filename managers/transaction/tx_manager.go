@@ -27,6 +27,11 @@ type Tx struct {
 func (m *Manager) ExecuteTx(ctx context.Context, isolationLevel string, f func(ctx context.Context) error) (err error) {
 	log.Printf("txManager: execute tx call")
 
+	if m.dbc.DB().HasTxInCtx(ctx) {
+		log.Printf("txManager: tx already in context, execute in having tx")
+		return errors.WithStack(f(ctx))
+	}
+
 	ctxTx, tx, err := m.dbc.DB().BeginTxWithContext(ctx, isolationLevel)
 	if err != nil {
 		return errors.WithStack(errors.Wrap(err, "failed to begin tx"))
