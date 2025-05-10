@@ -102,11 +102,32 @@ type NatsClientJetStream struct {
 	js            jetstream.JetStream
 	consumersCtxs []jetstream.ConsumeContext
 
+	opts *NatsClientJsOpts
+
 	wg        *sync.WaitGroup
 	connected chan struct{}
 }
 
-func NewJs(ctx context.Context, cfg Config) (mqClient.MqClient, error) {
+type NatsClientJetStreamOption interface {
+	Apply(*NatsClientJsOpts)
+}
+
+type NatsClientJsOpts struct {
+	withoutNackOnErrors bool
+}
+
+type natsJsOptionWithoutNackOnErrors bool
+
+func (no *natsJsOptionWithoutNackOnErrors) Apply(opt *NatsClientJsOpts) {
+	opt.withoutNackOnErrors = bool(*no)
+}
+
+func WithoutNackOnErrors() NatsClientJetStreamOption {
+	n := natsJsOptionWithoutNackOnErrors(true)
+	return &n
+}
+
+func NewJs(ctx context.Context, cfg Config, opts ...NatsClientJetStreamOption) (mqClient.MqClient, error) {
 	connectedChan := make(chan struct{})
 
 	conn, err := nats.Connect(
@@ -150,13 +171,19 @@ func NewJs(ctx context.Context, cfg Config) (mqClient.MqClient, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	return &NatsClientJetStream{
+	nc := &NatsClientJetStream{
 		cfg:       cfg,
 		conn:      conn,
 		js:        js,
 		wg:        &sync.WaitGroup{},
 		connected: connectedChan,
-	}, nil
+	}
+
+	for _, opt := range opts {
+		opt.Apply(nc.opts)
+	}
+
+	return nc, nil
 }
 
 func (nc *NatsClientJetStream) Publish(ctx context.Context, subj string, data []byte) error {
@@ -203,7 +230,7 @@ func (nc *NatsClientJetStream) Subscribe(ctx context.Context, handlersStreams ma
 				continue
 			}
 
-			consumerCtx, err := consumer.Consume(convertToNatsJsMsgHandler(ctx, handler))
+			consumerCtx, err := consumer.Consume(nc.convertToNatsJsMsgHandler(ctx, handler))
 			if err != nil {
 				log.Printf("failed to init consumer %s on stream %s subject %s: %v", consumerName, streamName, subject, err)
 				addSubjectToFailedStreams(streamName, subject, handler, failedStreams)
@@ -280,10 +307,14 @@ func (nc *NatsClientJetStream) Close(ctx context.Context) error {
 	return nil
 }
 
-func convertToNatsJsMsgHandler(ctx context.Context, handler mqClient.MqMsgHandler) jetstream.MessageHandler {
+func (nc *NatsClientJetStream) convertToNatsJsMsgHandler(ctx context.Context, handler mqClient.MqMsgHandler) jetstream.MessageHandler {
 	return func(msg jetstream.Msg) {
 		if err := handler(ctx, msg.Data()); err != nil {
 			log.Printf("failed to handle message %s: %v", msg.Data(), err)
+			if nc.opts.withoutNackOnErrors {
+				return
+			}
+
 			nackJsMsgWithLog(msg)
 			return
 		}
@@ -295,7 +326,7 @@ func convertToNatsJsMsgHandler(ctx context.Context, handler mqClient.MqMsgHandle
 }
 
 func nackJsMsgWithLog(msg jetstream.Msg) {
-	if err := msg.Nak(); err != nil {
+	if err := msg.NakWithDelay(); err != nil {
 		log.Printf("failed to nack msg %s: %v", msg.Data(), err)
 	}
 }
