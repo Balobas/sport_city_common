@@ -326,7 +326,8 @@ func (nc *NatsClientJetStream) convertToNatsJsMsgHandler(ctx context.Context, ha
 }
 
 func nackJsMsgWithLog(msg jetstream.Msg) {
-	if err := msg.NakWithDelay(); err != nil {
+	// default delay, TODO: refactor
+	if err := msg.NakWithDelay(1 * time.Second); err != nil {
 		log.Printf("failed to nack msg %s: %v", msg.Data(), err)
 	}
 }
