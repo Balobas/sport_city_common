@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	grpcErrors "github.com/balobas/sport_city_common/grpc/errors"
 	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
@@ -25,18 +26,18 @@ func UnaryAuthInterceptor(withoutAuthMethods map[string]struct{}) grpc.UnaryServ
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok {
 			log.Printf("empty metadata")
-			return nil, status.Error(codes.Unauthenticated, "token not provided")
+			return nil, status.Error(codes.Unauthenticated, grpcErrors.AuthErrMsgTokenNotProvided)
 		}
 		accessJwtMd := md.Get("accessJwt")
 		if len(accessJwtMd) == 0 {
 			log.Printf("empty accessJwt in metadata")
-			return nil, status.Error(codes.Unauthenticated, "token not provided")
+			return nil, status.Error(codes.Unauthenticated, grpcErrors.AuthErrMsgTokenNotProvided)
 		}
 
 		accessJwt := accessJwtMd[0]
 		if len(accessJwt) == 0 {
 			log.Printf("empty accessJwt[0] in metadata")
-			return nil, status.Error(codes.Unauthenticated, "token not provided")
+			return nil, status.Error(codes.Unauthenticated, grpcErrors.AuthErrMsgTokenNotProvided)
 		}
 
 		authUserInfo, err := parseAndVerifyToken(accessJwt)
@@ -54,49 +55,49 @@ func parseAndVerifyToken(tokenStr string) (AuthUserInfo, error) {
 	token, _ := jwt.Parse(tokenStr, nil)
 	if token == nil {
 		log.Printf("auth interceptor: failed to parse jwt token: empty token")
-		return AuthUserInfo{}, errors.New("invalid token")
+		return AuthUserInfo{}, errors.New(grpcErrors.AuthErrMsgInvalidToken)
 	}
 	claims, _ := token.Claims.(jwt.MapClaims)
 	userUidStr, ok := claims["user_uid"]
 	if !ok {
 		log.Printf("auth interceptor: invalid jwt: user_uid is empty")
-		return AuthUserInfo{}, errors.New("invalid token")
+		return AuthUserInfo{}, errors.New(grpcErrors.AuthErrMsgInvalidToken)
 	}
 
 	userUid, err := uuid.FromString(userUidStr.(string))
 	if err != nil {
 		log.Printf("auth interceptor: invalid jwt: user_uid is invalid")
-		return AuthUserInfo{}, errors.New("invalid token")
+		return AuthUserInfo{}, errors.New(grpcErrors.AuthErrMsgInvalidToken)
 	}
 
 	userRole, ok := claims["role"]
 	if !ok {
 		log.Printf("auth interceptor: invalid jwt: role is empty")
-		return AuthUserInfo{}, errors.New("invalid token")
+		return AuthUserInfo{}, errors.New(grpcErrors.AuthErrMsgInvalidToken)
 	}
 
 	userPermissions, ok := claims["permissions"]
 	if !ok {
 		log.Printf("auth interceptor: invalid jwt: permissions is empty")
-		return AuthUserInfo{}, errors.New("invalid token")
+		return AuthUserInfo{}, errors.New(grpcErrors.AuthErrMsgInvalidToken)
 	}
 
 	expiredStr, ok := claims["expired_at"]
 	if !ok {
 		log.Printf("auth interceptor: invalid jwt: expired is empty")
-		return AuthUserInfo{}, errors.New("invalid token")
+		return AuthUserInfo{}, errors.New(grpcErrors.AuthErrMsgInvalidToken)
 	}
 
 	// ??????
 	expiredAt, ok := expiredStr.(float64)
 	if !ok {
 		log.Printf("auth interceptor: invalid jwt: failed to parse expired")
-		return AuthUserInfo{}, errors.Errorf("invalid token: failed to parse expired")
+		return AuthUserInfo{}, errors.New(grpcErrors.AuthErrMsgInvalidToken)
 	}
 
 	if int64(expiredAt) <= time.Now().UTC().Unix() {
 		log.Printf("auth interceptor: invalid jwt: token expired")
-		return AuthUserInfo{}, errors.New("token expired")
+		return AuthUserInfo{}, errors.New(grpcErrors.AuthErrMsgTokenExpired)
 	}
 
 	userInfo := AuthUserInfo{

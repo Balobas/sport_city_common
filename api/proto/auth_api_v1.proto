@@ -1,0 +1,137 @@
+syntax="proto3";
+
+package auth;
+
+option go_package = "github.com/balobas/auth_service/pkg/auth_v1;auth_v1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+
+service Auth {
+    rpc Register(RegisterRequest) returns (RegisterResponse);
+    rpc UpdateUser(UpdateUserRequest) returns (JwtResponse); // required accessJwt in ctx
+    rpc GetUser(GetUserRequest) returns (GetUserResponse); // required accessJwt in ctx
+    rpc DeleteUser(DeleteUserRequest) returns (google.protobuf.Empty); // required accessJwt in ctx
+    rpc CreateAdmin(AdminCreateRequest) returns (AdminCreateResponse);
+    rpc GetAdmins(google.protobuf.Empty) returns (AdminsResponse);
+
+    rpc Login(LoginRequest) returns (JwtResponse);
+    rpc Logout(LogoutRequest) returns (google.protobuf.Empty); // required accessJwt in ctx
+    rpc Refresh(RefreshRequest) returns (JwtResponse);
+
+    rpc Verify(VerifyRequest) returns (google.protobuf.Empty);
+    rpc VerifyEmail(VerifyEmailRequest) returns (google.protobuf.Empty);
+
+    rpc AddPermissionToUser(UserPermissionParams) returns (google.protobuf.Empty);
+    rpc RemovePermissionFromUser(UserPermissionParams) returns (google.protobuf.Empty);
+
+    rpc CreatePermission(Permission) returns (google.protobuf.Empty);
+    rpc UpdatePermission(Permission) returns (google.protobuf.Empty);
+    rpc DeletePermission(Permission) returns (google.protobuf.Empty);
+    rpc GetPermissions(GetPermissionsParams) returns (Permissions);
+
+    rpc HealthCheck(google.protobuf.Empty) returns (HealthCheckResponse);
+}
+
+enum Role {
+    user = 0;
+    admin = 1;
+}
+
+message RegisterRequest {
+    string email = 1;
+    string password = 2;
+}
+
+message RegisterResponse {
+    string uid = 1;
+}
+
+message AdminCreateRequest {
+    string email = 1;
+    string password = 2;
+}
+
+message AdminCreateResponse {
+    string uid = 1;
+}
+
+message UpdateUserRequest {
+    string uid = 1;
+    string email = 2;
+    string password = 3;
+}
+
+message GetUserRequest {
+    string uid = 1;
+    string email = 2;
+}
+
+message GetUserResponse {
+    string uid = 1;
+    string email = 2;
+    Role role = 3;
+    repeated string permissions = 4;
+    google.protobuf.Timestamp created_at = 5;
+    google.protobuf.Timestamp updated_at = 6;
+}
+
+message AdminsResponse {
+    repeated GetUserResponse users = 1;
+}
+
+message DeleteUserRequest {
+    string uid = 1;
+}
+
+message VerifyEmailRequest {
+    string token = 1;
+}
+
+message LoginRequest {
+    string email = 1;
+    string password = 2;
+}
+
+message JwtResponse {
+    string accessJwt = 1;
+    string refreshJwt = 2;
+}
+
+message LogoutRequest {
+    string uid = 1;
+}
+
+message RefreshRequest {
+    string refreshJwt = 1;
+}
+
+message VerifyRequest {
+    string jwt = 1;
+}
+
+message UserPermissionParams {
+    string user_uid = 1;
+    string permission = 2;
+}
+
+message Permission {
+    string key = 1;
+    string description = 2;
+}
+
+message GetPermissionsParams {
+    string permission_pattern = 1;
+}
+
+message Permissions {
+    repeated Permission permissions = 1;
+}
+
+message HealthCheckResponse {
+    string status = 1;
+    string gitTag = 2;
+    string gitBranch = 3;
+    google.protobuf.Timestamp upTime = 4;
+}
