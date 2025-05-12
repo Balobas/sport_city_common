@@ -6,6 +6,7 @@ toolchain go1.22.10
 
 require (
 	github.com/Masterminds/squirrel v1.5.4
+	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 	github.com/georgysavva/scany v1.2.2
 	github.com/jackc/pgconn v1.14.3
 	github.com/jackc/pgx/v4 v4.18.3
