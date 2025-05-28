@@ -13,7 +13,6 @@ service Auth {
     rpc UpdateUser(UpdateUserRequest) returns (JwtResponse); // required accessJwt in ctx
     rpc GetUser(GetUserRequest) returns (GetUserResponse); // required accessJwt in ctx
     rpc DeleteUser(DeleteUserRequest) returns (google.protobuf.Empty); // required accessJwt in ctx
-    rpc CreateAdmin(AdminCreateRequest) returns (AdminCreateResponse);
     rpc GetAdmins(google.protobuf.Empty) returns (AdminsResponse);
 
     rpc Login(LoginRequest) returns (JwtResponse);
@@ -21,22 +20,98 @@ service Auth {
     rpc Refresh(RefreshRequest) returns (JwtResponse);
 
     rpc Verify(VerifyRequest) returns (google.protobuf.Empty);
+    rpc VerifyAccess(VerifyAccessRequest) returns (google.protobuf.Empty);
     rpc VerifyEmail(VerifyEmailRequest) returns (google.protobuf.Empty);
-
-    rpc AddPermissionToUser(UserPermissionParams) returns (google.protobuf.Empty);
-    rpc RemovePermissionFromUser(UserPermissionParams) returns (google.protobuf.Empty);
 
     rpc CreatePermission(Permission) returns (google.protobuf.Empty);
     rpc UpdatePermission(Permission) returns (google.protobuf.Empty);
     rpc DeletePermission(Permission) returns (google.protobuf.Empty);
     rpc GetPermissions(GetPermissionsParams) returns (Permissions);
 
+    rpc CreateRole(Role) returns (google.protobuf.Empty);
+    rpc UpdateRole(Role) returns (google.protobuf.Empty);
+    rpc DeleteRole(Role) returns (google.protobuf.Empty);
+    rpc GetRole(GetRoleParams) returns (Role);
+    rpc GetRoles(GetRolesParams) returns (Roles);
+
+    rpc AddRoleToUser(UserRoleParams) returns (google.protobuf.Empty);
+    rpc RemoveRoleFromUser(UserRoleParams) returns (google.protobuf.Empty);
+    rpc GetUserRoles(UUID) returns (Roles);
+
+    rpc AddPermissionsToRole(RolePermissionsParams) returns (google.protobuf.Empty);
+    rpc RemovePermissionsFromRole(RolePermissionsParams) returns (google.protobuf.Empty);
+    rpc GetRolePermissions(GetRolePermissionsParams) returns (Permissions);
+
+    rpc AddResourcePermission(ResourcePermissionParams) returns (google.protobuf.Empty);
+    rpc DeleteResourcePermission(ResourcePermissionParams) returns (google.protobuf.Empty);
+    rpc GetResourcesPermissions(GetResourcesPermissionsParams) returns (ResourcesPermissions);
+    rpc UpdateResourcePermission(ResourcePermissionParams) returns (google.protobuf.Empty);
+    rpc GetResourcePermission(GetResourcePermissionParams) returns (Permission);
+
     rpc HealthCheck(google.protobuf.Empty) returns (HealthCheckResponse);
 }
 
-enum Role {
-    user = 0;
-    admin = 1;
+message UUID {
+    string uid = 1;
+}
+
+message Role {
+    string name = 1;
+    string description = 2;
+}
+
+message GetRoleParams {
+    string role = 1;
+}
+
+message GetRolesParams {
+    string role_pattern = 1;
+    int64 limit = 2;
+    int64 offset = 3;
+}
+
+message Roles {
+    repeated Role roles = 1;
+}
+
+message UserRoleParams {
+    string user_uid = 1;
+    string role = 2;
+}
+
+message RolePermissionsParams {
+    string role = 1;
+    repeated string permissions = 2;
+}
+
+message GetRolePermissionsParams {
+    string role = 1;
+}
+
+message ResourcePermissionParams {
+    string uri = 1;
+    string method = 2;
+    string permission = 3;
+}
+
+message GetResourcesPermissionsParams {
+    int64 limit = 1;
+    int64 offset = 2;
+}
+
+message GetResourcePermissionParams {
+    string uri = 1;
+    string method = 2;
+}
+
+message ResourcesPermissions {
+    repeated ResourcePermissionParams resources_permissions = 1;
+}
+
+message VerifyAccessRequest {
+    string uri = 1;
+    string method = 2;
+    string accessjwt = 3;
 }
 
 message RegisterRequest {
@@ -71,8 +146,8 @@ message GetUserRequest {
 message GetUserResponse {
     string uid = 1;
     string email = 2;
-    Role role = 3;
-    repeated string permissions = 4;
+    repeated string roles = 3;
+    bool is_verified = 4;
     google.protobuf.Timestamp created_at = 5;
     google.protobuf.Timestamp updated_at = 6;
 }
