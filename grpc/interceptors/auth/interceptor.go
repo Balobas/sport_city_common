@@ -3,6 +3,7 @@ package authInterceptor
 import (
 	"context"
 	"log"
+	"strings"
 	"time"
 
 	grpcErrors "github.com/balobas/sport_city_common/grpc/errors"
@@ -70,16 +71,18 @@ func parseAndVerifyToken(tokenStr string) (AuthUserInfo, error) {
 		return AuthUserInfo{}, errors.New(grpcErrors.AuthErrMsgInvalidToken)
 	}
 
-	userRole, ok := claims["role"]
+	roles, ok := claims["roles"]
 	if !ok {
-		log.Printf("auth interceptor: invalid jwt: role is empty")
-		return AuthUserInfo{}, errors.New(grpcErrors.AuthErrMsgInvalidToken)
+		return AuthUserInfo{}, errors.New("empty roles in token")
 	}
 
-	userPermissions, ok := claims["permissions"]
+	rolesStr, ok := roles.(string)
 	if !ok {
-		log.Printf("auth interceptor: invalid jwt: permissions is empty")
-		return AuthUserInfo{}, errors.New(grpcErrors.AuthErrMsgInvalidToken)
+		return AuthUserInfo{}, errors.New("invalid roles")
+	}
+	var rolesStrs []string
+	if len(rolesStr) != 0 {
+		rolesStrs = strings.Split(rolesStr, "")
 	}
 
 	expiredStr, ok := claims["expired_at"]
@@ -101,9 +104,8 @@ func parseAndVerifyToken(tokenStr string) (AuthUserInfo, error) {
 	}
 
 	userInfo := AuthUserInfo{
-		UserUid:     userUid,
-		Role:        userRole.(string),
-		Permissions: userPermissions.(string),
+		UserUid: userUid,
+		Roles:   rolesStrs,
 	}
 	return userInfo, nil
 }
@@ -123,7 +125,6 @@ func UserInfoFromContext(ctx context.Context) AuthUserInfo {
 }
 
 type AuthUserInfo struct {
-	UserUid     uuid.UUID
-	Role        string
-	Permissions string
+	UserUid uuid.UUID
+	Roles   []string
 }
