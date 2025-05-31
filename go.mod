@@ -12,6 +12,7 @@ require (
 	github.com/jackc/pgx/v4 v4.18.3
 	github.com/nats-io/nats.go v1.37.0
 	github.com/pkg/errors v0.9.1
+	github.com/rs/zerolog v1.15.0
 	github.com/satori/go.uuid v1.2.0
 	google.golang.org/grpc v1.68.0
 	google.golang.org/protobuf v1.35.2
