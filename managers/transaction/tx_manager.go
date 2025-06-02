@@ -2,10 +2,10 @@ package transaction
 
 import (
 	"context"
-	"log"
 
 	common "github.com/balobas/sport_city_common"
 	clientDB "github.com/balobas/sport_city_common/clients/database"
+	"github.com/balobas/sport_city_common/logger"
 	"github.com/pkg/errors"
 )
 
@@ -25,10 +25,11 @@ type Tx struct {
 }
 
 func (m *Manager) ExecuteTx(ctx context.Context, isolationLevel string, f func(ctx context.Context) error) (err error) {
-	log.Printf("txManager: execute tx call")
+	log := logger.From(ctx)
+	log.Debug().Msg("txManager: execute tx call")
 
 	if m.dbc.DB().HasTxInCtx(ctx) {
-		log.Printf("txManager: tx already in context, execute in having tx")
+		log.Debug().Msg("txManager: tx already in context, execute in having tx")
 		return errors.WithStack(f(ctx))
 	}
 
@@ -39,8 +40,8 @@ func (m *Manager) ExecuteTx(ctx context.Context, isolationLevel string, f func(c
 
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("panic recovered")
-			err = errors.Wrapf(err, "panic recovered: %v", r)
+			err = errors.Wrapf(err, "panic recovered(while execute tx): %v", r)
+			log.Warn().Err(err).Send()
 		}
 
 		if err != nil {
@@ -48,14 +49,14 @@ func (m *Manager) ExecuteTx(ctx context.Context, isolationLevel string, f func(c
 				err = errors.Wrapf(err, "rollback error: %v", rollbackErr)
 			}
 
-			log.Printf("rollback tx")
+			log.Debug().Msg("rollback tx")
 			return
 		}
 
 		if commitErr := tx.Commit(ctxTx); commitErr != nil {
 			err = errors.Wrapf(err, "commit error: %v", commitErr)
 		}
-		log.Printf("commit tx")
+		log.Debug().Msg("commit tx")
 	}()
 
 	if err := f(ctxTx); err != nil {
@@ -80,7 +81,8 @@ func (m *Manager) NewTransaction(isolationLevel string, transactors ...Transacto
 
 // Deprecated
 func (tx Tx) Execute(ctx context.Context, f func(ctx context.Context) error) (err error) {
-	log.Printf("txManager: execute tx call")
+	log := logger.From(ctx)
+	log.Debug().Msg("txManager: execute tx call")
 	internalTransactions := make([]common.Transaction, 0, len(tx.transactors))
 
 	ctxTx := ctx
@@ -102,8 +104,8 @@ func (tx Tx) Execute(ctx context.Context, f func(ctx context.Context) error) (er
 		}()
 
 		if r := recover(); r != nil {
-			log.Printf("panic recovered")
-			err = errors.Wrapf(err, "panic recovered: %v", r)
+			err = errors.Wrapf(err, "panic recovered(while execute tx): %v", r)
+			log.Warn().Err(err).Send()
 		}
 
 		if err != nil {
@@ -114,7 +116,7 @@ func (tx Tx) Execute(ctx context.Context, f func(ctx context.Context) error) (er
 						err = errors.Wrapf(err, "rollback error: %v", rollbackErr)
 					}
 
-					log.Printf("rollback tx")
+					log.Debug().Msg("rollback tx")
 				}
 			}
 			return
@@ -125,7 +127,7 @@ func (tx Tx) Execute(ctx context.Context, f func(ctx context.Context) error) (er
 				if commitErr := txn.Commit(ctxTx); commitErr != nil {
 					err = errors.Wrapf(err, "commit error: %v", commitErr)
 				}
-				log.Printf("commit tx")
+				log.Debug().Msg("commit tx")
 			}
 		}
 	}()

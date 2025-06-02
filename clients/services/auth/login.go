@@ -2,13 +2,14 @@ package clientAuthService
 
 import (
 	"context"
-	"log"
 
 	"github.com/balobas/sport_city_common/clients/services/auth/proto_gen/auth_v1"
+	"github.com/balobas/sport_city_common/logger"
 )
 
 func (c *AuthClient) Login(ctx context.Context, email string, password string) (accessJwt string, refreshJwt string, err error) {
-	log.Printf("authClient.Login: email %s", email)
+	log := logger.From(ctx)
+	log.Debug().Msgf("authClient.Login: email %s", email)
 
 	var resp *auth_v1.JwtResponse
 	resp, err = c.client.Login(ctx, &auth_v1.LoginRequest{
@@ -16,7 +17,6 @@ func (c *AuthClient) Login(ctx context.Context, email string, password string) (
 		Password: password,
 	})
 	if err != nil {
-		log.Printf("failed to login user %s: %v", email, err)
 		return
 	}
 

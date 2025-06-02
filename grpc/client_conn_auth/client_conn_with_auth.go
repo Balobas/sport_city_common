@@ -2,10 +2,10 @@ package grpcClientConn
 
 import (
 	"context"
-	"log"
 	"strings"
 
 	grpcErrors "github.com/balobas/sport_city_common/grpc/errors"
+	"github.com/balobas/sport_city_common/logger"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -50,9 +50,10 @@ func (cc *ClientConnWithAuth) Invoke(ctx context.Context, method string, args an
 }
 
 func (cc *ClientConnWithAuth) invoke(ctx context.Context, method string, args any, reply any, retries int64, opts ...grpc.CallOption) error {
+	log := logger.From(ctx)
 	retries++
 	if retries > cc.maxRetries {
-		log.Printf("authClientConn.Invoke: max retry attempts (%d) reached", cc.maxRetries)
+		log.Debug().Msgf("authClientConn.Invoke: max retry attempts (%d) reached", cc.maxRetries)
 		return errors.New("retry attempts reached")
 	}
 
@@ -69,36 +70,36 @@ func (cc *ClientConnWithAuth) invoke(ctx context.Context, method string, args an
 		return err
 	}
 
-	log.Printf("authClientConn.Invoke: failed to invoke %s: %v", method, err)
+	log.Warn().Err(err).Msgf("authClientConn.Invoke: failed to invoke %s", method)
 
 	if isTokenNotProvidedFromError(err) {
-		log.Printf("authClientConn.Invoke: try to login")
+		log.Debug().Msg("authClientConn.Invoke: try to login")
 
 		loginErr := cc.authManager.Login(ctx)
 
 		if loginErr != nil {
 			if isUserNotFoundFromError(loginErr) {
-				log.Printf("authClientConn.Invoke: login failed: %v, try to register", err)
+				log.Debug().Msg("authClientConn.Invoke: login failed, try to register")
 				regErr := cc.authManager.Register(ctx)
 				if regErr != nil {
-					log.Printf("authClientConn.Invoke: request failed (%v), login failed %v, register failed %v", err, loginErr, regErr)
+					log.Warn().Err(regErr).Msg("authClientConn.Invoke: request failed, login failed, register failed")
 					return err
 				}
 
-				log.Printf("authClientConn.Invoke: successfully register service")
+				log.Debug().Msg("authClientConn.Invoke: successfully register service")
 
 				loginErr = cc.authManager.Login(ctx)
 				if loginErr != nil {
-					log.Printf("authClientConn.Invoke: request failed (%v), login failed after register: %v", err, loginErr)
+					log.Warn().Err(loginErr).Msg("authClientConn.Invoke: request failed, login failed after register")
 					return err
 				}
 
 			} else {
-				log.Printf("authClientConn.Invoke: request failed (%v), login failed %v", err, loginErr)
+				log.Warn().Msgf("authClientConn.Invoke: request failed (%v), login failed %v", err, loginErr)
 				return err
 			}
 		}
-		log.Printf("authClientConn.Invoke: successfully login")
+		log.Debug().Msg("authClientConn.Invoke: successfully login")
 
 		ctx = metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
 			"accessJwt": cc.authManager.GetAccessToken(),
@@ -108,13 +109,13 @@ func (cc *ClientConnWithAuth) invoke(ctx context.Context, method string, args an
 	}
 
 	if isTokenInvalidOrExpiredFromError(err) {
-		log.Printf("authClientConn.Invoke: token is invalid or expired, try to refresh")
+		log.Debug().Msg("authClientConn.Invoke: token is invalid or expired, try to refresh")
 		refreshErr := cc.authManager.Refresh(ctx)
 		if refreshErr != nil {
-			log.Printf("authClientConn.Invoke: request failed (%v), refresh tokens failed %v", err, refreshErr)
+			log.Warn().Msgf("authClientConn.Invoke: request failed (%v), refresh tokens failed %v", err, refreshErr)
 			return err
 		}
-		log.Printf("authClientConn.Invoke: successfully refresh token")
+		log.Debug().Msg("authClientConn.Invoke: successfully refresh token")
 
 		ctx = metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
 			"accessJwt": cc.authManager.GetAccessToken(),

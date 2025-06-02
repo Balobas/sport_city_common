@@ -2,16 +2,17 @@ package clientAuthService
 
 import (
 	"context"
-	"log"
 
 	authClientEntity "github.com/balobas/sport_city_common/clients/services/auth/entity"
 	"github.com/balobas/sport_city_common/clients/services/auth/proto_gen/auth_v1"
+	"github.com/balobas/sport_city_common/logger"
 	uuid "github.com/satori/go.uuid"
 	"google.golang.org/grpc/metadata"
 )
 
 func (c *AuthClient) GetAuthUser(ctx context.Context, accessJwt string, uid uuid.UUID, email string) (authClientEntity.AuthUser, error) {
-	log.Printf("authClient.GetUser: uid '%s' email '%s'", uid, email)
+	log := logger.From(ctx)
+	log.Debug().Msgf("authClient.GetUser: uid '%s' email '%s'", uid, email)
 
 	ctx = metadata.AppendToOutgoingContext(ctx, accessJwtKey, accessJwt)
 
@@ -20,7 +21,6 @@ func (c *AuthClient) GetAuthUser(ctx context.Context, accessJwt string, uid uuid
 		Email: email,
 	})
 	if err != nil {
-		log.Printf("failed to get user with uid '%s' email '%s': %v", uid, email, err)
 		return authClientEntity.AuthUser{}, err
 	}
 

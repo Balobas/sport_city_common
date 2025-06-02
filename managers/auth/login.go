@@ -2,7 +2,6 @@ package authManager
 
 import (
 	"context"
-	"log"
 
 	auth_v1 "github.com/balobas/sport_city_common/api/auth_service_v1"
 	"github.com/pkg/errors"
@@ -17,7 +16,6 @@ func (cm *ClientsAuthManager) Login(ctx context.Context) error {
 		Password: pwd,
 	})
 	if err != nil {
-		log.Printf("clientsAuthManager.Login: failed to login: %v", err)
 		return errors.WithStack(err)
 	}
 

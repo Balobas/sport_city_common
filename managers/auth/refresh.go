@@ -2,7 +2,6 @@ package authManager
 
 import (
 	"context"
-	"log"
 
 	auth_v1 "github.com/balobas/sport_city_common/api/auth_service_v1"
 	"github.com/pkg/errors"
@@ -18,7 +17,6 @@ func (cm *ClientsAuthManager) Refresh(ctx context.Context) error {
 		RefreshJwt: refreshJwt,
 	})
 	if err != nil {
-		log.Printf("clientsAuthManager.Refresh: failed to refresh: %v", err)
 		return errors.WithStack(err)
 	}
 

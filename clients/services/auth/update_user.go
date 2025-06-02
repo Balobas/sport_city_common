@@ -2,10 +2,10 @@ package clientAuthService
 
 import (
 	"context"
-	"log"
 
-	uuid "github.com/satori/go.uuid"
 	"github.com/balobas/sport_city_common/clients/services/auth/proto_gen/auth_v1"
+	"github.com/balobas/sport_city_common/logger"
+	uuid "github.com/satori/go.uuid"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -16,7 +16,8 @@ func (c *AuthClient) UpdateAuthUser(
 	email string,
 	password string,
 ) (accessJwt string, refreshJwt string, err error) {
-	log.Printf("authClient.UpdateUser: uid %s", uid)
+	log := logger.From(ctx)
+	log.Debug().Msgf("authClient.UpdateUser: uid %s", uid)
 
 	ctx = metadata.AppendToOutgoingContext(ctx, accessJwtKey, accessToken)
 
@@ -27,7 +28,6 @@ func (c *AuthClient) UpdateAuthUser(
 		Password: password,
 	})
 	if err != nil {
-		log.Printf("failed to update user %s: %v", uid, err)
 		return
 	}
 

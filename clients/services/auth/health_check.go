@@ -2,13 +2,14 @@ package clientAuthService
 
 import (
 	"context"
-	"log"
 
 	authClientEntity "github.com/balobas/sport_city_common/clients/services/auth/entity"
+	"github.com/balobas/sport_city_common/logger"
 )
 
 func (c *AuthClient) HealthCheck(ctx context.Context) authClientEntity.AuthServiceHealthCheck {
-	log.Printf("authClient.HealthCheck")
+	log := logger.From(ctx)
+	log.Debug().Msg("authClient.HealthCheck")
 
 	resp, err := c.client.HealthCheck(ctx, nil)
 	if err != nil {
