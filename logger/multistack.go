@@ -6,43 +6,65 @@ import (
 	"github.com/pkg/errors"
 )
 
-type frame struct {
-	File string `json:"file"`
-	Func string `json:"func"`
-	Line string `json:"line"`
-}
-
-func marshallStack(err error) interface{} {
-	errStackTracer, ok := errors.Cause(err).(stackTracer)
-	if !ok {
-		return nil
-	}
-
-	st := errStackTracer.StackTrace()
-
-	frames := make([]frame, 0, len(st))
-
-	for _, f := range st {
-		fs := &formatState{}
-
-		resFrame := frame{
-			File: frameField(f, &formatState{b: []byte{'+'}}, 's'),
-			Func: frameField(f, fs, 'n'),
-			Line: frameField(f, fs, 'd'),
-		}
-
-		switch {
-		case strings.HasSuffix(resFrame.File, "runtime/asm_amd64.s"):
-		case strings.HasSuffix(resFrame.File, "runtime/proc.go"):
-		default:
-			frames = append(frames, resFrame)
-		}
-	}
-	return frames
+type StackTrace struct {
+	Error  string  `json:"error"`
+	Frames []frame `json:"stacktrace"`
 }
 
 type stackTracer interface {
 	StackTrace() errors.StackTrace
+}
+type frame struct {
+	StackSourceFileName string `json:"source"`
+	StackSourceLineName string `json:"line"`
+	StackSourceFuncName string `json:"func"`
+}
+
+func MarshalMultiStack(err error) interface{} {
+	stackTraces := []StackTrace{}
+	currentErr := err
+	for currentErr != nil {
+		stack, ok := currentErr.(stackTracer)
+		if !ok {
+			currentErr = unwrapErr(currentErr)
+			continue
+		}
+		st := stack.StackTrace()
+		s := &formatState{}
+		stackTrace := StackTrace{
+			Error: currentErr.Error(),
+		}
+
+		for _, f := range st {
+			frame := frame{
+				StackSourceFileName: frameField(f, &formatState{b: []byte{'+'}}, 's'),
+				StackSourceLineName: frameField(f, s, 'd'),
+				StackSourceFuncName: frameField(f, s, 'n'),
+			}
+			switch {
+			case strings.HasSuffix(frame.StackSourceFileName, "runtime/asm_amd64.s"):
+			case strings.HasSuffix(frame.StackSourceFileName, "runtime/proc.go"):
+			default:
+				stackTrace.Frames = append(stackTrace.Frames, frame)
+			}
+		}
+		stackTraces = append(stackTraces, stackTrace)
+
+		currentErr = unwrapErr(currentErr)
+	}
+	return stackTraces
+}
+
+func unwrapErr(err error) error {
+	cause, ok := err.(causer)
+	if !ok {
+		return nil
+	}
+	return cause.Cause()
+}
+
+type causer interface {
+	Cause() error
 }
 
 type formatState struct {

@@ -16,11 +16,12 @@ const TimeFormat = "2006-01-02T15:04:05.000000Z07:00"
 
 func Init(cfg Config) {
 	zerolog.TimeFieldFormat = TimeFormat
-	zerolog.ErrorStackMarshaler = marshallStack
+	zerolog.ErrorStackMarshaler = MarshalMultiStack
 
 	zL := zerolog.New(os.Stdout).
 		With().
 		Stack().
+		Caller().
 		Logger()
 
 	if cfg.Debug() {
