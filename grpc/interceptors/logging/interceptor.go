@@ -2,10 +2,12 @@ package loggingInterceptor
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	grpcErrors "github.com/balobas/sport_city_common/grpc/errors"
 	"github.com/balobas/sport_city_common/logger"
+	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -101,9 +103,15 @@ func UnaryLoggingInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 			logResponseFields["response"] = respBody
 		}
 
+		var l *zerolog.Event
+		if err != nil && !strings.Contains(err.Error(), "not found") {
+			l = log.Error().Err(err)
+		} else {
+			l = log.Info()
+		}
+
 		// log end request
-		log.Info().
-			Timestamp().
+		l.Timestamp().
 			Fields(logResponseFields).
 			Msg("incoming request finished")
 

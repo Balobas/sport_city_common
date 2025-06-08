@@ -49,6 +49,9 @@ func UnaryAuthInterceptor(withoutAuthMethods map[string]struct{}) grpc.UnaryServ
 
 		log.Info().Msgf("user %s successfully verified", authUserInfo.UserUid)
 
+		log = log.With().Str("callerUserUid", authUserInfo.UserUid.String()).Logger()
+		ctx = logger.ContextWithLogger(ctx, log)
+
 		return handler(contextWithUserInfo(ctx, authUserInfo), req)
 	}
 }
