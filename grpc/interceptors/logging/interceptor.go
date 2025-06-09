@@ -2,12 +2,10 @@ package loggingInterceptor
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	grpcErrors "github.com/balobas/sport_city_common/grpc/errors"
 	"github.com/balobas/sport_city_common/logger"
-	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -29,8 +27,7 @@ func UnaryLoggingInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok {
-			log.Printf("")
-			return nil, status.Error(codes.Unauthenticated, grpcErrors.AuthErrMsgTokenNotProvided)
+			return nil, status.Error(codes.InvalidArgument, grpcErrors.AuthErrMsgTokenNotProvided)
 		}
 
 		var reqId string
@@ -85,6 +82,9 @@ func UnaryLoggingInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 			"status":     status.Code(err).String(),
 			"latency_ms": float64(t2.Sub(t1).Nanoseconds()) / 1000000.0,
 		}
+		if err != nil {
+			logResponseFields["error"] = err.Error()
+		}
 
 		if op.withResponse {
 			var respBody string
@@ -103,15 +103,9 @@ func UnaryLoggingInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 			logResponseFields["response"] = respBody
 		}
 
-		var l *zerolog.Event
-		if err != nil && !strings.Contains(err.Error(), "not found") {
-			l = log.Error().Err(err)
-		} else {
-			l = log.Info()
-		}
-
 		// log end request
-		l.Timestamp().
+		log.Info().
+			Timestamp().
 			Fields(logResponseFields).
 			Msg("incoming request finished")
 
