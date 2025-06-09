@@ -11,8 +11,8 @@ func convertError(err error) error {
 		return nil
 	}
 
-	pgErr := &pgconn.PgError{}
-	if errors.As(err, pgErr) {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
 		case "23505":
 			return commonErrors.ErrAlreadyExists
