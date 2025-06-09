@@ -25,7 +25,7 @@ func UnaryLoggingInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 	}
 
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		log := logger.From(ctx)
+		log := logger.Logger()
 
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok {
