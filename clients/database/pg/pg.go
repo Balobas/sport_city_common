@@ -18,20 +18,33 @@ type pg struct {
 	pool *pgxpool.Pool
 }
 
+type (
+	ExecFn  func(context.Context, string, ...interface{}) (pgconn.CommandTag, error)
+	QueryFn func(context.Context, string, ...interface{}) (pgx.Rows, error)
+)
+
 func (p *pg) Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {
+	var execFn ExecFn
 	if tx, ok := ctx.Value(TxKey{}).(pgx.Tx); ok {
-		return tx.Exec(ctx, sql, args...)
+		execFn = tx.Exec
+	} else {
+		execFn = p.pool.Exec
 	}
 
-	return p.pool.Exec(ctx, sql, args...)
+	tag, err := execFn(ctx, sql, args...)
+	return tag, convertError(err)
 }
 
 func (p *pg) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
+	var queryFn QueryFn
 	if tx, ok := ctx.Value(TxKey{}).(pgx.Tx); ok {
-		return tx.Query(ctx, sql, args...)
+		queryFn = tx.Query
+	} else {
+		queryFn = p.pool.Query
 	}
 
-	return p.pool.Query(ctx, sql, args...)
+	rows, err := queryFn(ctx, sql, args...)
+	return rows, convertError(err)
 }
 
 func (p *pg) QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row {
@@ -45,7 +58,7 @@ func (p *pg) QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.
 func (p *pg) ScanQueryRow(ctx context.Context, dest interface{}, sql string, args ...interface{}) error {
 	row, err := p.Query(ctx, sql, args...)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	return pgxscan.ScanOne(dest, row)
@@ -54,7 +67,7 @@ func (p *pg) ScanQueryRow(ctx context.Context, dest interface{}, sql string, arg
 func (p *pg) ScanAllQuery(ctx context.Context, dest interface{}, sql string, args ...interface{}) error {
 	rows, err := p.Query(ctx, sql, args...)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	return pgxscan.ScanAll(dest, rows)
