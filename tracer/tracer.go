@@ -14,7 +14,7 @@ import (
 
 var (
 	defaultTracer trace.Tracer
-	once          *sync.Once
+	once          = sync.Once{}
 )
 
 type Config interface {
