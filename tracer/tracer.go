@@ -17,9 +17,20 @@ var (
 	once          *sync.Once
 )
 
-func NewTracerProvider(url, serviceName string) (*tracesdk.TracerProvider, error) {
+type Config interface {
+	ServiceName() string
+	TraceCollectorUrl() string
+}
+
+func NewTracerProvider(cfg Config) (*tracesdk.TracerProvider, error) {
 	// Create the Jaeger exporter
-	exp, err := jaegerExporter.New(jaegerExporter.WithCollectorEndpoint(jaegerExporter.WithEndpoint(url)))
+	exp, err := jaegerExporter.New(
+		jaegerExporter.WithCollectorEndpoint(
+			jaegerExporter.WithEndpoint(
+				cfg.TraceCollectorUrl(),
+			),
+		),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -29,11 +40,11 @@ func NewTracerProvider(url, serviceName string) (*tracesdk.TracerProvider, error
 		// Record information about this application in a Resource.
 		tracesdk.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceNameKey.String(serviceName),
+			semconv.ServiceNameKey.String(cfg.ServiceName()),
 		)),
 	)
 	once.Do(func() {
-		defaultTracer = tp.Tracer(fmt.Sprintf("%s_default_tracer", serviceName))
+		defaultTracer = tp.Tracer(fmt.Sprintf("%s_tracer", cfg.ServiceName()))
 	})
 
 	return tp, nil
