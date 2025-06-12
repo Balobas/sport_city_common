@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"go.opentelemetry.io/otel"
 	jaegerExporter "go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
@@ -45,6 +46,7 @@ func NewTracerProvider(cfg Config) (*tracesdk.TracerProvider, error) {
 	)
 	once.Do(func() {
 		defaultTracer = tp.Tracer(fmt.Sprintf("%s_tracer", cfg.ServiceName()))
+		otel.SetTracerProvider(tp)
 	})
 
 	return tp, nil
