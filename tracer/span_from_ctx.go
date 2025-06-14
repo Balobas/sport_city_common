@@ -2,7 +2,9 @@ package tracer
 
 import (
 	"context"
+	"encoding/json"
 
+	"github.com/balobas/sport_city_common/logger"
 	uuid "github.com/satori/go.uuid"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -20,4 +22,14 @@ func UidsToStrSliceAttr(key string, vals []uuid.UUID) attribute.KeyValue {
 		strs[i] = vals[i].String()
 	}
 	return attribute.StringSlice(key, strs)
+}
+
+func SpanParams(ctx context.Context, p map[string]interface{}) attribute.KeyValue {
+	log := logger.From(ctx)
+	bts, err := json.Marshal(p)
+	if err != nil {
+		log.Warn().Str("error", err.Error()).Msg("failed to marshal params for trace span")
+		return attribute.KeyValue{}
+	}
+	return attribute.String("params", string(bts))
 }
