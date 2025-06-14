@@ -24,7 +24,7 @@ func UidsToStrSliceAttr(key string, vals []uuid.UUID) attribute.KeyValue {
 	return attribute.StringSlice(key, strs)
 }
 
-func SpanParams(ctx context.Context, p map[string]interface{}) attribute.KeyValue {
+func SpanParams(ctx context.Context, p interface{}) attribute.KeyValue {
 	log := logger.From(ctx)
 	bts, err := json.Marshal(p)
 	if err != nil {
