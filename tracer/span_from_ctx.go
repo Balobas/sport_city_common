@@ -2,8 +2,8 @@ package tracer
 
 import (
 	"context"
-	"fmt"
 
+	uuid "github.com/satori/go.uuid"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -14,7 +14,7 @@ func SpanFromCtxWithAttrs(ctx context.Context, methodName string, attrs ...attri
 	return ctx, span
 }
 
-func StringerToStrSliceAttr(key string, vals []fmt.Stringer) attribute.KeyValue {
+func UidsToStrSliceAttr(key string, vals []uuid.UUID) attribute.KeyValue {
 	strs := make([]string, len(vals))
 	for i := 0; i < len(vals); i++ {
 		strs[i] = vals[i].String()
