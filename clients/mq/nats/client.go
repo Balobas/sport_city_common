@@ -2,16 +2,21 @@ package natsClient
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"reflect"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
 
 	mqClient "github.com/balobas/sport_city_common/clients/mq"
 	"github.com/balobas/sport_city_common/logger"
+	"github.com/balobas/sport_city_common/tracer"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Config interface {
@@ -120,12 +125,19 @@ type NatsClientJetStreamOption interface {
 
 type NatsClientJsOpts struct {
 	withoutNackOnErrors bool
+	withTrace           bool
 }
 
 type natsJsOptionWithoutNackOnErrors bool
 
 func (no *natsJsOptionWithoutNackOnErrors) Apply(opt *NatsClientJsOpts) {
 	opt.withoutNackOnErrors = bool(*no)
+}
+
+type natsJsOptionWithTrace bool
+
+func (nt *natsJsOptionWithTrace) Apply(opt *NatsClientJsOpts) {
+	opt.withTrace = bool(*nt)
 }
 
 func WithoutNackOnErrors() NatsClientJetStreamOption {
@@ -320,9 +332,56 @@ func (nc *NatsClientJetStream) Close(ctx context.Context) error {
 	return nil
 }
 
+type msgWithTraceId struct {
+	TraceId string `json:"traceId"`
+}
+
 func (nc *NatsClientJetStream) convertToNatsJsMsgHandler(ctx context.Context, handler mqClient.MqMsgHandler) jetstream.MessageHandler {
+	var (
+		parentStructName string
+		fnName           string
+	)
+	fnOrMethodRealName := runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name()
+
+	parentStructParts := strings.Split(fnOrMethodRealName, "(*")
+	if len(parentStructParts) != 0 {
+		parentStructName = strings.Split(parentStructParts[1], ")")[0]
+	}
+
+	fnNameParts := strings.Split(fnOrMethodRealName, ".")
+	if len(fnNameParts) != 0 {
+		fnName = strings.Split(fnNameParts[len(fnNameParts)-1], "-")[0]
+	}
+
 	return func(msg jetstream.Msg) {
-		log := logger.From(ctx)
+
+		log := logger.From(ctx).With().Fields(map[string]interface{}{
+			"layer":     "handlers",
+			"layerType": "mq",
+			"component": parentStructName,
+			"method":    fnName,
+		}).Logger()
+
+		if nc.opts.withTrace {
+			var msgTraceInfo msgWithTraceId
+			if err := json.Unmarshal(msg.Data(), &msgTraceInfo); err != nil {
+				log.Warn().Str("error", err.Error()).Msg("failed to unmarshal traceID from message")
+			} else {
+				traceId, err := trace.TraceIDFromHex(msgTraceInfo.TraceId)
+				if err != nil {
+					log.Error().Err(err).Msg("invalid trace id")
+				} else {
+					spanContext := trace.NewSpanContext(trace.SpanContextConfig{
+						TraceID: traceId,
+					})
+					ctx = trace.ContextWithSpanContext(ctx, spanContext)
+				}
+			}
+			var span trace.Span
+			ctx, span = tracer.FromCtx(ctx).Start(ctx, fmt.Sprintf("%s.%s", parentStructName, fnName))
+			defer span.End()
+		}
+
 		if err := handler(ctx, msg.Data()); err != nil {
 			log.Error().Err(err).Msgf("failed to handle message %s", msg.Data())
 			if nc.opts.withoutNackOnErrors {
