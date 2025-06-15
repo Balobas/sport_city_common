@@ -134,14 +134,19 @@ func (no *natsJsOptionWithoutNackOnErrors) Apply(opt *NatsClientJsOpts) {
 	opt.withoutNackOnErrors = bool(*no)
 }
 
+func WithoutNackOnErrors() NatsClientJetStreamOption {
+	n := natsJsOptionWithoutNackOnErrors(true)
+	return &n
+}
+
 type natsJsOptionWithTrace bool
 
 func (nt *natsJsOptionWithTrace) Apply(opt *NatsClientJsOpts) {
 	opt.withTrace = bool(*nt)
 }
 
-func WithoutNackOnErrors() NatsClientJetStreamOption {
-	n := natsJsOptionWithoutNackOnErrors(true)
+func WithTrace() NatsClientJetStreamOption {
+	n := natsJsOptionWithTrace(true)
 	return &n
 }
 
