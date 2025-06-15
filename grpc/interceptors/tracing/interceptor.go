@@ -37,6 +37,10 @@ func UnaryTracingInterceptor() grpc.UnaryServerInterceptor {
 		traceId := fmt.Sprintf("%s", span.SpanContext().TraceID())
 		ctx = metadata.AppendToOutgoingContext(ctx, traceIdHeader, traceId)
 
-		return handler(ctx, req)
+		resp, err := handler(ctx, req)
+		if err != nil {
+			span.RecordError(err)
+		}
+		return resp, err
 	}
 }
