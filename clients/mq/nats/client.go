@@ -16,6 +16,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -211,7 +212,12 @@ func NewJs(ctx context.Context, cfg Config, opts ...NatsClientJetStreamOption) (
 }
 
 func (nc *NatsClientJetStream) Publish(ctx context.Context, subj string, data []byte) error {
-	log := logger.From(ctx)
+	log := logger.From(ctx).With().Fields(map[string]interface{}{
+		"layer":     "mqPublisher",
+		"component": "NatsClientJetStream",
+		"method":    "Publish",
+	}).Logger()
+
 	ack, err := nc.js.Publish(ctx, subj, data)
 	if err != nil {
 		log.Debug().Msgf("failed to publish message into subject %s", subj)
@@ -359,14 +365,17 @@ func (nc *NatsClientJetStream) convertToNatsJsMsgHandler(ctx context.Context, ha
 	}
 
 	return func(msg jetstream.Msg) {
-
 		log := logger.From(ctx).With().Fields(map[string]interface{}{
 			"layer":     "handlers",
 			"layerType": "mq",
 			"component": parentStructName,
 			"method":    fnName,
 		}).Logger()
+		log.Debug().Fields(map[string]interface{}{
+			"msg": string(msg.Data()),
+		}).Send()
 
+		var span trace.Span = trace.SpanFromContext(ctx)
 		if nc.opts.withTrace {
 			var msgTraceInfo msgWithTraceId
 			if err := json.Unmarshal(msg.Data(), &msgTraceInfo); err != nil {
@@ -382,12 +391,14 @@ func (nc *NatsClientJetStream) convertToNatsJsMsgHandler(ctx context.Context, ha
 					ctx = trace.ContextWithSpanContext(ctx, spanContext)
 				}
 			}
-			var span trace.Span
 			ctx, span = tracer.FromCtx(ctx).Start(ctx, fmt.Sprintf("%s.%s", parentStructName, fnName))
 			defer span.End()
 		}
 
 		if err := handler(ctx, msg.Data()); err != nil {
+			span.RecordError(err, trace.WithAttributes(
+				attribute.String("message", "failed to handle message"),
+			))
 			log.Error().Err(err).Msgf("failed to handle message %s", msg.Data())
 			if nc.opts.withoutNackOnErrors {
 				return
@@ -398,6 +409,9 @@ func (nc *NatsClientJetStream) convertToNatsJsMsgHandler(ctx context.Context, ha
 		}
 
 		if err := msg.Ack(); err != nil {
+			span.RecordError(err, trace.WithAttributes(
+				attribute.String("message", "failed to ack message"),
+			))
 			log.Error().Err(err).Msgf("failed to ack message %s", msg.Data())
 		}
 	}
