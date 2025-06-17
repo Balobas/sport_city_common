@@ -29,6 +29,8 @@ func UnaryTracingInterceptor() grpc.UnaryServerInterceptor {
 				})
 				ctx = trace.ContextWithSpanContext(ctx, spanContext)
 			}
+		} else {
+			log.Info().Msg("metadata hasnt traceID")
 		}
 
 		ctx, span := tracer.FromCtx(ctx).Start(ctx, info.FullMethod)

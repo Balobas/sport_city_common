@@ -57,9 +57,11 @@ func (cc *ClientConnWithAuth) invoke(ctx context.Context, method string, args an
 		return errors.New("retry attempts reached")
 	}
 
-	ctx = metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
-		"accessJwt": cc.authManager.GetAccessToken(),
-	}))
+	md, b := metadata.FromIncomingContext(ctx)
+	if b {
+		md["accessjwt"][0] = cc.authManager.GetAccessToken()
+	}
+	ctx = metadata.NewOutgoingContext(ctx, md)
 
 	err := cc.ClientConn.Invoke(ctx, method, args, reply, opts...)
 	if err == nil {
@@ -101,9 +103,8 @@ func (cc *ClientConnWithAuth) invoke(ctx context.Context, method string, args an
 		}
 		log.Debug().Msg("authClientConn.Invoke: successfully login")
 
-		ctx = metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
-			"accessJwt": cc.authManager.GetAccessToken(),
-		}))
+		md["accessjwt"][0] = cc.authManager.GetAccessToken()
+		ctx = metadata.NewOutgoingContext(ctx, md)
 
 		return cc.invoke(ctx, method, args, reply, retries, opts...)
 	}
@@ -117,9 +118,9 @@ func (cc *ClientConnWithAuth) invoke(ctx context.Context, method string, args an
 		}
 		log.Debug().Msg("authClientConn.Invoke: successfully refresh token")
 
-		ctx = metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
-			"accessJwt": cc.authManager.GetAccessToken(),
-		}))
+		md["accessjwt"][0] = cc.authManager.GetAccessToken()
+		ctx = metadata.NewOutgoingContext(ctx, md)
+
 		return cc.invoke(ctx, method, args, reply, retries, opts...)
 	}
 
