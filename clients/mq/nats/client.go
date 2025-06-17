@@ -217,10 +217,37 @@ func (nc *NatsClientJetStream) Publish(ctx context.Context, subj string, data []
 		"component": "NatsClientJetStream",
 		"method":    "Publish",
 	}).Logger()
+	log.Debug().Fields(map[string]interface{}{
+		"subject": subj,
+		"data":    string(data),
+	}).Send()
+
+	var span trace.Span = trace.SpanFromContext(ctx)
+	if nc.opts.withTrace {
+		var msgTraceInfo msgWithTraceId
+		if err := json.Unmarshal(data, &msgTraceInfo); err != nil {
+			log.Warn().Str("error", err.Error()).Msg("failed to unmarshal traceID from message")
+		} else {
+			traceId, err := trace.TraceIDFromHex(msgTraceInfo.TraceId)
+			if err != nil {
+				log.Error().Err(err).Msg("invalid trace id")
+			} else {
+				spanContext := trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: traceId,
+				})
+				ctx = trace.ContextWithSpanContext(ctx, spanContext)
+			}
+		}
+		ctx, span = tracer.FromCtx(ctx).Start(ctx, "NatsClientJetStream.Publish")
+		defer span.End()
+	}
 
 	ack, err := nc.js.Publish(ctx, subj, data)
 	if err != nil {
-		log.Debug().Msgf("failed to publish message into subject %s", subj)
+		span.RecordError(err, trace.WithAttributes(
+			attribute.String("message", "failed to publish message"),
+		))
+		log.Debug().Msg("failed to publish message")
 		return errors.WithStack(err)
 	}
 	log.Info().Msgf("ack info: stream %s, domain %s, duplicate %t, sequence %d", ack.Stream, ack.Domain, ack.Duplicate, ack.Sequence)
