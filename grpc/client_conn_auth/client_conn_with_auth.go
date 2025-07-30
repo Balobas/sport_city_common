@@ -114,7 +114,17 @@ func (cc *ClientConnWithAuth) invoke(ctx context.Context, method string, args an
 		refreshErr := cc.authManager.Refresh(ctx)
 		if refreshErr != nil {
 			log.Warn().Msgf("authClientConn.Invoke: request failed (%v), refresh tokens failed %v", err, refreshErr)
-			return err
+			// TODO: логиниться если рефреш истек
+			if isTokenInvalidOrExpiredFromError(refreshErr) {
+				log.Warn().Msgf("request failed, refresh failed, try to login")
+				loginErr := cc.authManager.Login(ctx)
+				if loginErr != nil {
+					log.Warn().Err(loginErr).Msg("authClientConn.Invoke: request failed, refresh failed, login failed")
+					return err
+				}
+			} else {
+				return err
+			}
 		}
 		log.Debug().Msg("authClientConn.Invoke: successfully refresh token")
 
