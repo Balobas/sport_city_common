@@ -4,8 +4,8 @@ import (
 	"context"
 
 	common "github.com/balobas/sport_city_common"
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type QueryExecer interface {

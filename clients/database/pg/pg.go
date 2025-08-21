@@ -5,10 +5,10 @@ import (
 
 	common "github.com/balobas/sport_city_common"
 	"github.com/balobas/sport_city_common/logger"
-	"github.com/georgysavva/scany/pgxscan"
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/georgysavva/scany/v2/pgxscan"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
 )
 
@@ -19,8 +19,8 @@ type pg struct {
 }
 
 type (
-	ExecFn  func(context.Context, string, ...interface{}) (pgconn.CommandTag, error)
-	QueryFn func(context.Context, string, ...interface{}) (pgx.Rows, error)
+	ExecFn  func(context.Context, string, ...any) (pgconn.CommandTag, error)
+	QueryFn func(context.Context, string, ...any) (pgx.Rows, error)
 )
 
 func (p *pg) Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {

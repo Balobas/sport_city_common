@@ -4,7 +4,7 @@ import (
 	"context"
 
 	clientDB "github.com/balobas/sport_city_common/clients/database"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
 )
 
@@ -13,7 +13,7 @@ type pgClient struct {
 }
 
 func NewClient(ctx context.Context, dsn string) (clientDB.ClientDB, error) {
-	pool, err := pgxpool.Connect(ctx, dsn)
+	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		return nil, errors.Errorf("failed to connect to db: %v", err)
 	}
