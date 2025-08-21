@@ -38,3 +38,7 @@ func (c *pgClient) Close(ctx context.Context) error {
 
 	return nil
 }
+
+func (c *pgClient) GetPool() *pgxpool.Pool {
+	return c.dbc.pool
+}

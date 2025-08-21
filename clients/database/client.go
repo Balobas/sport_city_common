@@ -6,6 +6,7 @@ import (
 	common "github.com/balobas/sport_city_common"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type QueryExecer interface {
@@ -31,5 +32,6 @@ type DB interface {
 
 type ClientDB interface {
 	DB() DB
+	GetPool() *pgxpool.Pool
 	Close(ctx context.Context) error
 }
