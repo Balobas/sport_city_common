@@ -431,7 +431,7 @@ func (nc *NatsClientJetStream) convertToNatsJsMsgHandler(ctx context.Context, ha
 				return
 			}
 
-			nackJsMsgWithLog(ctx, msg)
+			nackJsMsgWithLog(ctx, msg) // добавить в трейс ошибку
 			return
 		}
 

@@ -2,12 +2,11 @@ package loggingInterceptor
 
 import (
 	"context"
+	"errors"
 	"time"
 
-	grpcErrors "github.com/balobas/sport_city_common/grpc/errors"
 	"github.com/balobas/sport_city_common/logger"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
@@ -27,7 +26,8 @@ func UnaryLoggingInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok {
-			return nil, status.Error(codes.InvalidArgument, grpcErrors.AuthErrMsgTokenNotProvided)
+			log.Info().Str("req", info.FullMethod).Msg("metadata not provided")
+			return handler(ctx, req)
 		}
 
 		var reqId string
@@ -84,6 +84,10 @@ func UnaryLoggingInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		}
 		if err != nil {
 			logResponseFields["error"] = err.Error()
+
+			if op.shouldLogError(err) {
+				log.Error().Err(err).Send()
+			}
 		}
 
 		if op.withResponse {
@@ -114,8 +118,9 @@ func UnaryLoggingInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 }
 
 type options struct {
-	withRequest  bool
-	withResponse bool
+	withRequest      bool
+	withResponse     bool
+	withoutLogErrors []error
 }
 
 type Option func(opts *options)
@@ -137,4 +142,19 @@ func WithAllLog() Option {
 		opts.withRequest = true
 		opts.withResponse = true
 	}
+}
+
+func WithoutLogErrors(errs ...error) Option {
+	return func(opts *options) {
+		opts.withoutLogErrors = errs
+	}
+}
+
+func (opts *options) shouldLogError(err error) bool {
+	for _, e := range opts.withoutLogErrors {
+		if errors.Is(err, e) {
+			return false
+		}
+	}
+	return true
 }
