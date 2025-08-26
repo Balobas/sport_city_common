@@ -356,6 +356,114 @@ func (nc *NatsClientJetStream) resubscribeOnFailedStreams(ctx context.Context, f
 	}()
 }
 
+// v2
+
+/*
+SubscribeV2
+Новая версия инициализации консумеров, не привязанная к названиям сабжектов
+	streamConsumers: {
+		"stream": {
+			"consumerName": handler,
+			"cunsumerName": handler,
+		}
+	}
+*/
+func (nc *NatsClientJetStream) SubscribeV2(ctx context.Context, streamsConsumers map[string]map[string]mqClient.MqMsgHandler) (subErr error) {
+	log := logger.From(ctx)
+	failedStreams := map[string]map[string]mqClient.MqMsgHandler{}
+
+	defer func() {
+		if subErr == nil {
+			nc.resubscribeOnFailedStreamsV2(ctx, failedStreams)
+		}
+	}()
+
+	for streamName, consumers := range streamsConsumers {
+
+		stream, err := nc.js.Stream(ctx, streamName)
+		if err != nil {
+			log.Warn().Err(err).Msgf("failed to get stream %s", streamName)
+			failedStreams[streamName] = consumers
+			continue
+		}
+
+		for consumerName, handler := range consumers {
+			consumer, err := stream.Consumer(ctx, consumerName)
+			if err != nil {
+				log.Warn().Err(err).Msgf("failed to get consumer %s on stream %s", consumerName, streamName)
+				addConsumerWithHandlerIntoFailedStreams(failedStreams, streamName, consumerName, handler)
+				continue
+			}
+
+			consumerCtx, err := consumer.Consume(nc.convertToNatsJsMsgHandler(ctx, handler))
+			if err != nil {
+				log.Warn().Err(err).Msgf("failed to init consumer %s on stream %s", consumerName, streamName)
+				addConsumerWithHandlerIntoFailedStreams(failedStreams, streamName, consumerName, handler)
+				continue
+			}
+			log.Info().Msgf("successfully init consumer %s on stream %s", consumerName, streamName)
+
+			nc.consumersCtxs = append(nc.consumersCtxs, consumerCtx)
+		}
+	}
+
+	return nil
+}
+
+func addConsumerWithHandlerIntoFailedStreams(
+	failedStreams map[string]map[string]mqClient.MqMsgHandler,
+	streamName string,
+	consumerName string,
+	handler mqClient.MqMsgHandler,
+) {
+	streamConsumers, ok := failedStreams[streamName]
+	if !ok {
+		failedStreams[streamName] = map[string]mqClient.MqMsgHandler{
+			consumerName: handler,
+		}
+	} else {
+		streamConsumers[consumerName] = handler
+	}
+}
+
+func (nc *NatsClientJetStream) resubscribeOnFailedStreamsV2(ctx context.Context, failedStreams map[string]map[string]mqClient.MqMsgHandler) {
+	if len(failedStreams) == 0 {
+		return
+	}
+	log := logger.From(ctx)
+
+	nc.wg.Add(1)
+	go func() {
+		defer nc.wg.Done()
+
+		select {
+		case <-ctx.Done():
+			log.Info().Msg("stop attempts to init failed consumers, ctx done")
+			return
+		case <-nc.connected:
+			select {
+			case <-ctx.Done():
+				log.Info().Msg("stop attempts to init failed consumers, ctx done")
+				return
+			default:
+			}
+
+			nc.SubscribeV2(ctx, failedStreams)
+		case <-time.After(1 * time.Minute):
+			select {
+			case <-ctx.Done():
+				log.Info().Msg("stop attempts to init failed consumers, ctx done")
+				return
+			default:
+			}
+
+			nc.SubscribeV2(ctx, failedStreams)
+		}
+	}()
+}
+
+// v2 end
+
 func (nc *NatsClientJetStream) Close(ctx context.Context) error {
 	log := logger.From(ctx)
 
