@@ -254,6 +254,7 @@ func (nc *NatsClientJetStream) Publish(ctx context.Context, subj string, data []
 	return nil
 }
 
+// Deprecated
 func (nc *NatsClientJetStream) Subscribe(ctx context.Context, handlersStreams map[string]map[string]mqClient.MqMsgHandler) (subErr error) {
 	log := logger.From(ctx)
 	failedStreams := map[string]map[string]mqClient.MqMsgHandler{}
