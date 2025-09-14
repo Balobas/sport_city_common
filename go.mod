@@ -7,6 +7,7 @@ toolchain go1.23.10
 require (
 	github.com/Masterminds/squirrel v1.5.4
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
+	github.com/go-chi/chi v1.5.5
 	github.com/jackc/pgconn v1.14.3
 	github.com/nats-io/nats.go v1.37.0
 	github.com/pkg/errors v0.9.1
