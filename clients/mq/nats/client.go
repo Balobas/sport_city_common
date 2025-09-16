@@ -80,6 +80,10 @@ func (nc *NatsClientPubSub) Subscribe(ctx context.Context, handlers map[string]m
 	return nil
 }
 
+func (nc *NatsClientPubSub) SubscribeV2(ctx context.Context, streamsConsumers map[string]map[string]mqClient.MqMsgHandler) (subErr error) {
+	return nc.Subscribe(ctx, streamsConsumers)
+}
+
 func (nc *NatsClientPubSub) Close(ctx context.Context) error {
 	nc.conn.Close()
 	return nil
