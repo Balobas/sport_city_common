@@ -103,3 +103,8 @@ func (p *pg) HasTxInCtx(ctx context.Context) bool {
 	_, ok := ctx.Value(TxKey{}).(pgx.Tx)
 	return ok
 }
+
+func (p *pg) GetTxFromCtx(ctx context.Context) (pgx.Tx, bool) {
+	tx, ok := ctx.Value(TxKey{}).(pgx.Tx)
+	return tx, ok
+}
