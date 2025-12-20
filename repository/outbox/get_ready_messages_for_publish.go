@@ -30,7 +30,7 @@ func (r *OutboxRepository) GetReadyMessagesForPublish(ctx context.Context, batch
 		return nil, errors.WithStack(err)
 	}
 
-	rows, err := r.DB().Query(ctx, sql, args...)
+	rows, err := r.Query(ctx, sql, args...)
 	if err != nil {
 		err = errors.Wrap(err, "query failed")
 		log.Debug().Str("error", err.Error()).Send()

@@ -30,7 +30,7 @@ func (r *BasePgRepository) Create(ctx context.Context, row Row) error {
 		return err
 	}
 
-	_, err = r.DB().Exec(ctx, stmt, args...)
+	_, err = r.Exec(ctx, stmt, args...)
 	return err
 }
 
@@ -43,7 +43,7 @@ func (r *BasePgRepository) GetOne(ctx context.Context, row Row, condition sq.Sql
 		return err
 	}
 
-	return row.Scan(r.DB().QueryRow(ctx, stmt, args...))
+	return row.Scan(r.QueryRow(ctx, stmt, args...))
 }
 
 func (r *BasePgRepository) GetWithLimit(ctx context.Context, row Row, dest Rows, condition sq.Sqlizer, limit uint64, offset uint64) error {
@@ -57,7 +57,7 @@ func (r *BasePgRepository) GetWithLimit(ctx context.Context, row Row, dest Rows,
 
 	fmt.Println(stmt)
 
-	rows, err := r.DB().Query(ctx, stmt, args...)
+	rows, err := r.Query(ctx, stmt, args...)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (r *BasePgRepository) Update(ctx context.Context, row Row, condition sq.Sql
 		return err
 	}
 
-	_, err = r.DB().Exec(ctx, stmt, args...)
+	_, err = r.Exec(ctx, stmt, args...)
 	return err
 }
 
@@ -91,7 +91,7 @@ func (r *BasePgRepository) Delete(ctx context.Context, row Row, condition sq.Sql
 	if err != nil {
 		return err
 	}
-	_, err = r.DB().Exec(ctx, stmt, args...)
+	_, err = r.Exec(ctx, stmt, args...)
 	return err
 }
 
@@ -104,7 +104,7 @@ func (r *BasePgRepository) GetSome(ctx context.Context, row Row, dest Rows, cond
 		return err
 	}
 
-	rows, err := r.DB().Query(ctx, stmt, args...)
+	rows, err := r.Query(ctx, stmt, args...)
 	if err != nil {
 		return err
 	}

@@ -2,6 +2,7 @@ package DBclient
 
 import (
 	"context"
+	"io/fs"
 
 	common "github.com/balobas/sport_city_common"
 	"github.com/jackc/pgx/v5"
@@ -22,17 +23,19 @@ type Transactor interface {
 	BeginTxWithContext(ctx context.Context, isolationLevel string) (context.Context, common.Transaction, error)
 }
 
-type DB interface {
+type ClientDB interface {
 	QueryExecer
 	Transactor
 	HasTxInCtx(ctx context.Context) bool
 	GetTxFromCtx(ctx context.Context) (pgx.Tx, bool)
 	Ping(ctx context.Context) error
-	Close()
-}
-
-type ClientDB interface {
-	DB() DB
 	GetPool() *pgxpool.Pool
 	Close(ctx context.Context) error
+	Migrate(ctx context.Context, files fs.FS) error
 }
+
+const (
+	IsolationLevelReadCommited   = "read commited"
+	IsolationLevelRepeatableRead = "repeatable read"
+	IsolationLevelSerialazible   = "serializable"
+)
