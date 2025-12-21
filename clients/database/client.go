@@ -29,7 +29,7 @@ type ClientDB interface {
 	HasTxInCtx(ctx context.Context) bool
 	GetTxFromCtx(ctx context.Context) (pgx.Tx, bool)
 	Ping(ctx context.Context) error
-	GetPool() *pgxpool.Pool
+	GetMasterPool() *pgxpool.Pool
 	Close(ctx context.Context) error
 	Migrate(ctx context.Context, files fs.FS) error
 }

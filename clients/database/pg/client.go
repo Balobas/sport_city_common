@@ -69,7 +69,7 @@ func (c *pgClient) Close(ctx context.Context) error {
 	return nil
 }
 
-func (c *pgClient) GetPool() *pgxpool.Pool {
+func (c *pgClient) GetMasterPool() *pgxpool.Pool {
 	return c.pg.pool
 }
 

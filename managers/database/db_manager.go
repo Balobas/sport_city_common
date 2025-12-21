@@ -1,21 +1,28 @@
-package transaction
+package dbManager
 
 import (
 	"context"
 
-	clientDB "github.com/balobas/sport_city_common/clients/database"
 	"github.com/balobas/sport_city_common/logger"
 	"github.com/pkg/errors"
 )
 
 type Manager struct {
-	dbc clientDB.ClientDB
+	dbc ClientDB
 }
 
-func NewTxManager(client clientDB.ClientDB) *Manager {
+func NewDbManager(client ClientDB) *Manager {
 	return &Manager{
 		dbc: client,
 	}
+}
+
+func (m *Manager) MasterCtx(ctx context.Context) context.Context {
+	return m.dbc.CtxWithMasterKey(ctx)
+}
+
+func (m *Manager) ReplicaCtx(ctx context.Context) context.Context {
+	return m.dbc.CtxWithReplicaKey(ctx)
 }
 
 func (m *Manager) ExecuteTx(ctx context.Context, isolationLevel string, f func(ctx context.Context) error) (err error) {

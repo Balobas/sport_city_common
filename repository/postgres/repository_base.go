@@ -5,11 +5,11 @@ import (
 )
 
 type BasePgRepository struct {
-	clientDB.ClientDB
+	clientDB.QueryExecer
 }
 
 func New(client clientDB.ClientDB) *BasePgRepository {
 	return &BasePgRepository{
-		ClientDB: client,
+		QueryExecer: client,
 	}
 }
