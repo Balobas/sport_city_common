@@ -120,3 +120,11 @@ func convertMigrationResultToStr(res []*goose.MigrationResult) string {
 
 	return buf.String()
 }
+
+func (c *pgClient) CtxWithMasterKey(ctx context.Context) context.Context {
+	return ctx
+}
+
+func (c *pgClient) CtxWithReplicaKey(ctx context.Context) context.Context {
+	return ctx
+}

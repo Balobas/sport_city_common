@@ -30,6 +30,8 @@ type ClientDB interface {
 	GetTxFromCtx(ctx context.Context) (pgx.Tx, bool)
 	Ping(ctx context.Context) error
 	GetMasterPool() *pgxpool.Pool
+	CtxWithMasterKey(ctx context.Context) context.Context
+	CtxWithReplicaKey(ctx context.Context) context.Context
 	Close(ctx context.Context) error
 	Migrate(ctx context.Context, files fs.FS) error
 }
