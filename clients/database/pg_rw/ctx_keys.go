@@ -25,5 +25,5 @@ func (p *pgClientRw) getConnByCtxKey(ctx context.Context) PgConn {
 		return p.replicaPool
 	}
 
-	return p.replicaPool
+	return p.masterPool
 }
