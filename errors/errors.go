@@ -86,3 +86,22 @@ func IsDatabaseError(err error) bool {
 	var target *DatabaseError
 	return errors.As(err, target)
 }
+
+type BadRequestError struct {
+	*BaseError
+}
+
+func NewBadRequestError(err error, opts ...ErrorOption) *BadRequestError {
+	return &BadRequestError{
+		BaseError: NewBaseError(
+			ErrorCodeBadRequest,
+			err.Error(),
+			err,
+			opts...,
+		),
+	}
+}
+
+func (bre *BadRequestError) Unwrap() error {
+	return bre.BaseError
+}
