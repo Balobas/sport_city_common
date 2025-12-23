@@ -33,8 +33,8 @@ func NewClientRW(
 	}
 
 	return &pgClientRw{
-		replicaPool: masterPool,
-		masterPool:  replicaPool,
+		replicaPool: replicaPool,
+		masterPool:  masterPool,
 	}, nil
 }
 
