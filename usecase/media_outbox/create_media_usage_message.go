@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// Deprecated
 func (uc *UcMediaOutbox) CreateMediaUsageMessage(
 	ctx context.Context,
 	domain string,

@@ -14,6 +14,9 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pressly/goose/v3 v3.26.0
 	github.com/riverqueue/river v0.29.0
+	github.com/riverqueue/river/riverdriver v0.29.0
+	github.com/riverqueue/river/riverdriver/riverpgxv5 v0.29.0
+	github.com/riverqueue/river/rivertype v0.29.0
 	github.com/rs/zerolog v1.15.0
 	github.com/satori/go.uuid v1.2.0
 	go.opentelemetry.io/otel v1.37.0
@@ -28,9 +31,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/riverqueue/river/riverdriver v0.29.0 // indirect
 	github.com/riverqueue/river/rivershared v0.29.0 // indirect
-	github.com/riverqueue/river/rivertype v0.29.0 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
