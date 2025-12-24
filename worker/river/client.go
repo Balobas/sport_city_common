@@ -82,6 +82,10 @@ func (c *Client) Stop(ctx context.Context) error {
 	return c.r.Stop(ctx)
 }
 
+func AddWorker[T river.JobArgs](c *Client, worker river.Worker[T]) {
+	river.AddWorker(c.w, worker)
+}
+
 func (c *Client) InsertRiver(ctx context.Context, args river.JobArgs, opts *river.InsertOpts) error {
 	tx, isInTx := c.dbClient.GetTxFromCtx(ctx)
 	if isInTx {
