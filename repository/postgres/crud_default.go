@@ -61,6 +61,7 @@ func (r *BasePgRepository) GetWithLimit(ctx context.Context, row Row, dest Rows,
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	return dest.ScanAll(rows)
 }
@@ -108,6 +109,7 @@ func (r *BasePgRepository) GetSome(ctx context.Context, row Row, dest Rows, cond
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	return dest.ScanAll(rows)
 }
