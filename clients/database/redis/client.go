@@ -103,8 +103,8 @@ func (c *RedisClient) ScanAllKeys(ctx context.Context, pattern string) ([]string
 	return res, nil
 }
 
-func (c *RedisClient) Delete(ctx context.Context, key string) error {
-	cmd := c.client.Del(ctx, key)
+func (c *RedisClient) Delete(ctx context.Context, keys ...string) error {
+	cmd := c.client.Del(ctx, keys...)
 	if cmd.Err() != nil {
 		return cmd.Err()
 	}
