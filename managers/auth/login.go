@@ -14,6 +14,10 @@ func (cm *ClientsAuthManager) Login(ctx context.Context) error {
 	resp, err := cm.client.Login(ctx, &auth_v1.LoginRequest{
 		Email:    email,
 		Password: pwd,
+		Device: &auth_v1.Device{
+			Uid:  cm.cfg.ServiceDeviceUid().String(),
+			Name: cm.cfg.ServiceDeviceName(),
+		},
 	})
 	if err != nil {
 		return errors.WithStack(err)

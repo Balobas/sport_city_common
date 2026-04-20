@@ -48,6 +48,8 @@ service Auth {
     rpc UpdateResourcePermission(ResourcePermissionParams) returns (google.protobuf.Empty);
     rpc GetResourcePermission(GetResourcePermissionParams) returns (Permission);
 
+    rpc GetUserAuthorizedDevices(UUID) returns (AuthorizedDevices);
+
     rpc HealthCheck(google.protobuf.Empty) returns (HealthCheckResponse);
 }
 
@@ -164,9 +166,19 @@ message VerifyEmailRequest {
     string token = 1;
 }
 
+message Device {
+    string uid = 1;
+    string user_uid = 2;
+    string name  =  3;
+    string agent = 4;
+    string language = 5;
+    google.protobuf.Timestamp created_at = 6;
+}
+
 message LoginRequest {
     string email = 1;
     string password = 2;
+    Device device = 3;
 }
 
 message JwtResponse {
@@ -175,7 +187,7 @@ message JwtResponse {
 }
 
 message LogoutRequest {
-    string uid = 1;
+    string device_uid = 1;
 }
 
 message RefreshRequest {
@@ -209,4 +221,18 @@ message HealthCheckResponse {
     string gitTag = 2;
     string gitBranch = 3;
     google.protobuf.Timestamp upTime = 4;
+}
+
+message AuthorizedDevice {
+    string uid = 1;
+    string user_uid = 2;
+    string name  =  3;
+    string agent = 4;
+    string language = 5;
+    google.protobuf.Timestamp created_at = 6;
+    google.protobuf.Timestamp authorized_at = 7;
+}
+
+message AuthorizedDevices {
+    repeated AuthorizedDevice devices = 1;
 }

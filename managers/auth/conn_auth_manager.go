@@ -5,6 +5,7 @@ import (
 
 	auth_v1 "github.com/balobas/sport_city_common/api/auth_service_v1"
 	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -22,6 +23,8 @@ type ClientsAuthManager struct {
 type Config interface {
 	ServiceCreds() (email string, pwd string)
 	AuthServiceGrpcAddress() string
+	ServiceDeviceUid() uuid.UUID
+	ServiceDeviceName() string
 }
 
 func New(
