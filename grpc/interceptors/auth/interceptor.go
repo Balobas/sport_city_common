@@ -77,6 +77,18 @@ func parseAndVerifyToken(ctx context.Context, tokenStr string) (AuthUserInfo, er
 		return AuthUserInfo{}, errors.New(grpcErrors.AuthErrMsgInvalidToken)
 	}
 
+	deviceUidStr, ok := claims["device_uid"]
+	if !ok {
+		log.Debug().Msg("auth interceptor: invalid jwt: device_uid is empty")
+		return AuthUserInfo{}, errors.New(grpcErrors.AuthErrMsgInvalidToken)
+	}
+
+	deviceUid, err := uuid.FromString(deviceUidStr.(string))
+	if err != nil {
+		log.Debug().Msg("auth interceptor: invalid jwt: device_uid is invalid")
+		return AuthUserInfo{}, errors.New(grpcErrors.AuthErrMsgInvalidToken)
+	}
+
 	roles, ok := claims["roles"]
 	if !ok {
 		return AuthUserInfo{}, errors.New("empty roles in token")
@@ -109,8 +121,9 @@ func parseAndVerifyToken(ctx context.Context, tokenStr string) (AuthUserInfo, er
 	}
 
 	userInfo := AuthUserInfo{
-		UserUid: userUid,
-		Roles:   rolesStrs,
+		UserUid:   userUid,
+		DeviceUid: deviceUid,
+		Roles:     rolesStrs,
 	}
 	return userInfo, nil
 }
@@ -130,6 +143,7 @@ func UserInfoFromContext(ctx context.Context) AuthUserInfo {
 }
 
 type AuthUserInfo struct {
-	UserUid uuid.UUID
-	Roles   []string
+	UserUid   uuid.UUID
+	DeviceUid uuid.UUID
+	Roles     []string
 }

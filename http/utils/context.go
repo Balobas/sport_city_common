@@ -12,6 +12,7 @@ type ctxKeyAuthUserInfo struct{}
 
 type AuthUserInfo struct {
 	Uid        uuid.UUID
+	DeviceUid  uuid.UUID
 	Email      string
 	Roles      []string
 	IsVerified bool
