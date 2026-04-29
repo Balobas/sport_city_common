@@ -78,13 +78,13 @@ func WithoutReflection() ServerOption {
 	}
 }
 
-func WithAuthInterceptor(opts AuthInterceptorOptions) ServerOption {
+func WithAuthInterceptor(withoutAuthMap map[string]struct{}) ServerOption {
 	return func(so *ServerOptions) {
 		so.withAuthInterceptor = true
-		if opts.withoutAuthMap == nil {
+		if withoutAuthMap == nil {
 			so.authInterceptorOptions.withoutAuthMap = map[string]struct{}{}
 		} else {
-			so.authInterceptorOptions.withoutAuthMap = opts.withoutAuthMap
+			so.authInterceptorOptions.withoutAuthMap = withoutAuthMap
 		}
 	}
 }
