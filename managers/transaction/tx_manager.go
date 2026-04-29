@@ -7,7 +7,7 @@ import (
 	"github.com/balobas/sport_city_common/logger"
 	"github.com/pkg/errors"
 )
-
+// Возможно уже deprecated
 type Manager struct {
 	dbc clientDB.ClientDB
 }
