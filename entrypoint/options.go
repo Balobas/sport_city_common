@@ -39,13 +39,13 @@ func WithProcesses(processes ...entrypointProccess.Process) Option {
 	}
 }
 
-func WithGrpcServers(srvs ...entrypointGrpc.Server) Option {
+func WithGrpcServers(srvs ...*entrypointGrpc.Server) Option {
 	return func(ep *EntryPoint) {
 		ep.grpcServers = srvs
 	}
 }
 
-func WithHttpServers(srvs ...entrypointHttp.Server) Option {
+func WithHttpServers(srvs ...*entrypointHttp.Server) Option {
 	return func(ep *EntryPoint) {
 		ep.httpServers = srvs
 	}

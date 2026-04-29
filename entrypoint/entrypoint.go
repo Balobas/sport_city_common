@@ -16,8 +16,8 @@ type EntryPoint struct {
 	preRuns   []PreRunFn
 	processes []entrypointProccess.Process
 
-	grpcServers []entrypointGrpc.Server
-	httpServers []entrypointHttp.Server
+	grpcServers []*entrypointGrpc.Server
+	httpServers []*entrypointHttp.Server
 }
 
 func New(
