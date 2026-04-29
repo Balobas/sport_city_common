@@ -25,7 +25,7 @@ func New(
 	}
 }
 
-func (w *Worker) Run(ctx context.Context) {
+func (w *Worker) Run(ctx context.Context) error {
 	log := logger.From(ctx).With().Fields(map[string]interface{}{
 		"layer":     "worker",
 		"component": "publisherWorker",
@@ -40,12 +40,12 @@ func (w *Worker) Run(ctx context.Context) {
 		case <-ctx.Done():
 			timer.Stop()
 			log.Info().Msgf("stop publisher worker. ctx done %v\n", ctx.Err())
-			return
+			return nil
 		case <-timer.C:
 			select {
 			case <-ctx.Done():
 				log.Info().Msgf("stop publisher worker. ctx done %v\n", ctx.Err())
-				return
+				return nil
 			default:
 			}
 
