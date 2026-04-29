@@ -25,6 +25,10 @@ func New(
 	}
 }
 
+func (w *Worker) Name() string {
+	return "workerOutboxPublisher"
+}
+
 func (w *Worker) Run(ctx context.Context) error {
 	log := logger.From(ctx).With().Fields(map[string]interface{}{
 		"layer":     "worker",
