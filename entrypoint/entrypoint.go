@@ -24,7 +24,9 @@ func New(
 	cfg Config,
 	opts ...Option,
 ) *EntryPoint {
-	ep := &EntryPoint{}
+	ep := &EntryPoint{
+		cfg: cfg,
+	}
 	ep.applyOpts(opts...)
 	return ep
 }
