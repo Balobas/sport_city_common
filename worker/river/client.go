@@ -74,7 +74,7 @@ func (c *Client) NextRetry(job *rivertype.JobRow) time.Time {
 	return time.Now().Add(c.cfg.NextRetry())
 }
 
-func (c *Client) Start(ctx context.Context) error {
+func (c *Client) Run(ctx context.Context) error {
 	return c.r.Start(ctx)
 }
 
