@@ -50,11 +50,17 @@ service Auth {
 
     rpc GetUserAuthorizedDevices(UUID) returns (AuthorizedDevices);
 
+    rpc GetUsersAuthorizedDevices(UUIDs) returns (AuthorizedDevices);
+
     rpc HealthCheck(google.protobuf.Empty) returns (HealthCheckResponse);
 }
 
 message UUID {
     string uid = 1;
+}
+
+message UUIDs {
+    repeated string uids = 1;
 }
 
 message Role {

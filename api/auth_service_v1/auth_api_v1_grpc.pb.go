@@ -55,6 +55,7 @@ type AuthClient interface {
 	UpdateResourcePermission(ctx context.Context, in *ResourcePermissionParams, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetResourcePermission(ctx context.Context, in *GetResourcePermissionParams, opts ...grpc.CallOption) (*Permission, error)
 	GetUserAuthorizedDevices(ctx context.Context, in *UUID, opts ...grpc.CallOption) (*AuthorizedDevices, error)
+	GetUsersAuthorizedDevices(ctx context.Context, in *UUIDs, opts ...grpc.CallOption) (*AuthorizedDevices, error)
 	HealthCheck(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*HealthCheckResponse, error)
 }
 
@@ -354,6 +355,15 @@ func (c *authClient) GetUserAuthorizedDevices(ctx context.Context, in *UUID, opt
 	return out, nil
 }
 
+func (c *authClient) GetUsersAuthorizedDevices(ctx context.Context, in *UUIDs, opts ...grpc.CallOption) (*AuthorizedDevices, error) {
+	out := new(AuthorizedDevices)
+	err := c.cc.Invoke(ctx, "/auth.Auth/GetUsersAuthorizedDevices", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authClient) HealthCheck(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*HealthCheckResponse, error) {
 	out := new(HealthCheckResponse)
 	err := c.cc.Invoke(ctx, "/auth.Auth/HealthCheck", in, out, opts...)
@@ -399,6 +409,7 @@ type AuthServer interface {
 	UpdateResourcePermission(context.Context, *ResourcePermissionParams) (*emptypb.Empty, error)
 	GetResourcePermission(context.Context, *GetResourcePermissionParams) (*Permission, error)
 	GetUserAuthorizedDevices(context.Context, *UUID) (*AuthorizedDevices, error)
+	GetUsersAuthorizedDevices(context.Context, *UUIDs) (*AuthorizedDevices, error)
 	HealthCheck(context.Context, *emptypb.Empty) (*HealthCheckResponse, error)
 	mustEmbedUnimplementedAuthServer()
 }
@@ -502,6 +513,9 @@ func (UnimplementedAuthServer) GetResourcePermission(context.Context, *GetResour
 }
 func (UnimplementedAuthServer) GetUserAuthorizedDevices(context.Context, *UUID) (*AuthorizedDevices, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUserAuthorizedDevices not implemented")
+}
+func (UnimplementedAuthServer) GetUsersAuthorizedDevices(context.Context, *UUIDs) (*AuthorizedDevices, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUsersAuthorizedDevices not implemented")
 }
 func (UnimplementedAuthServer) HealthCheck(context.Context, *emptypb.Empty) (*HealthCheckResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method HealthCheck not implemented")
@@ -1095,6 +1109,24 @@ func _Auth_GetUserAuthorizedDevices_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Auth_GetUsersAuthorizedDevices_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UUIDs)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).GetUsersAuthorizedDevices(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/auth.Auth/GetUsersAuthorizedDevices",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).GetUsersAuthorizedDevices(ctx, req.(*UUIDs))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Auth_HealthCheck_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -1247,6 +1279,10 @@ var Auth_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserAuthorizedDevices",
 			Handler:    _Auth_GetUserAuthorizedDevices_Handler,
+		},
+		{
+			MethodName: "GetUsersAuthorizedDevices",
+			Handler:    _Auth_GetUsersAuthorizedDevices_Handler,
 		},
 		{
 			MethodName: "HealthCheck",
