@@ -150,5 +150,5 @@ func isUserNotFoundFromError(err error) bool {
 }
 
 const (
-	userNotFound = "user not found"
+	userNotFound = "not found"
 )
