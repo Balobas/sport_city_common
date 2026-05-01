@@ -59,7 +59,7 @@ func (cc *ClientConnWithAuth) invoke(ctx context.Context, method string, args an
 
 	md, b := metadata.FromIncomingContext(ctx)
 	if b {
-		md["accessjwt"][0] = cc.authManager.GetAccessToken()
+		md["accessjwt"] = []string{cc.authManager.GetAccessToken()}
 	}
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
@@ -103,7 +103,7 @@ func (cc *ClientConnWithAuth) invoke(ctx context.Context, method string, args an
 		}
 		log.Debug().Msg("authClientConn.Invoke: successfully login")
 
-		md["accessjwt"][0] = cc.authManager.GetAccessToken()
+		md["accessjwt"] = []string{cc.authManager.GetAccessToken()}
 		ctx = metadata.NewOutgoingContext(ctx, md)
 
 		return cc.invoke(ctx, method, args, reply, retries, opts...)
@@ -128,7 +128,7 @@ func (cc *ClientConnWithAuth) invoke(ctx context.Context, method string, args an
 		}
 		log.Debug().Msg("authClientConn.Invoke: successfully refresh token")
 
-		md["accessjwt"][0] = cc.authManager.GetAccessToken()
+		md["accessjwt"] = []string{cc.authManager.GetAccessToken()}
 		ctx = metadata.NewOutgoingContext(ctx, md)
 
 		return cc.invoke(ctx, method, args, reply, retries, opts...)
