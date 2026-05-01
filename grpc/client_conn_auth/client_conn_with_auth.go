@@ -57,13 +57,9 @@ func (cc *ClientConnWithAuth) invoke(ctx context.Context, method string, args an
 		return errors.New("retry attempts reached")
 	}
 
-	md, b := metadata.FromIncomingContext(ctx)
-	if b {
-		md["accessjwt"] = []string{cc.authManager.GetAccessToken()}
-	}
-	ctx = metadata.NewOutgoingContext(ctx, md)
+	sendCtx := metadata.NewOutgoingContext(ctx, metadataWithToken(ctx, cc.authManager.GetAccessToken()))
 
-	err := cc.ClientConn.Invoke(ctx, method, args, reply, opts...)
+	err := cc.ClientConn.Invoke(sendCtx, method, args, reply, opts...)
 	if err == nil {
 		return nil
 	}
@@ -77,12 +73,12 @@ func (cc *ClientConnWithAuth) invoke(ctx context.Context, method string, args an
 	if isTokenNotProvidedFromError(err) {
 		log.Debug().Msg("authClientConn.Invoke: try to login")
 
-		loginErr := cc.authManager.Login(ctx)
+		loginErr := cc.authManager.Login(sendCtx)
 
 		if loginErr != nil {
 			if isUserNotFoundFromError(loginErr) {
 				log.Debug().Msg("authClientConn.Invoke: login failed, try to register")
-				regErr := cc.authManager.Register(ctx)
+				regErr := cc.authManager.Register(sendCtx)
 				if regErr != nil {
 					log.Warn().Err(regErr).Msg("authClientConn.Invoke: request failed, login failed, register failed")
 					return err
@@ -90,7 +86,7 @@ func (cc *ClientConnWithAuth) invoke(ctx context.Context, method string, args an
 
 				log.Debug().Msg("authClientConn.Invoke: successfully register service")
 
-				loginErr = cc.authManager.Login(ctx)
+				loginErr = cc.authManager.Login(sendCtx)
 				if loginErr != nil {
 					log.Warn().Err(loginErr).Msg("authClientConn.Invoke: request failed, login failed after register")
 					return err
@@ -103,21 +99,20 @@ func (cc *ClientConnWithAuth) invoke(ctx context.Context, method string, args an
 		}
 		log.Debug().Msg("authClientConn.Invoke: successfully login")
 
-		md["accessjwt"] = []string{cc.authManager.GetAccessToken()}
-		ctx = metadata.NewOutgoingContext(ctx, md)
+		sendCtx = metadata.NewOutgoingContext(ctx, metadataWithToken(ctx, cc.authManager.GetAccessToken()))
 
-		return cc.invoke(ctx, method, args, reply, retries, opts...)
+		return cc.invoke(sendCtx, method, args, reply, retries, opts...)
 	}
 
 	if isTokenInvalidOrExpiredFromError(err) {
 		log.Debug().Msg("authClientConn.Invoke: token is invalid or expired, try to refresh")
-		refreshErr := cc.authManager.Refresh(ctx)
+		refreshErr := cc.authManager.Refresh(sendCtx)
 		if refreshErr != nil {
 			log.Warn().Msgf("authClientConn.Invoke: request failed (%v), refresh tokens failed %v", err, refreshErr)
 			// TODO: логиниться если рефреш истек
 			if isTokenInvalidOrExpiredFromError(refreshErr) {
 				log.Warn().Msgf("request failed, refresh failed, try to login")
-				loginErr := cc.authManager.Login(ctx)
+				loginErr := cc.authManager.Login(sendCtx)
 				if loginErr != nil {
 					log.Warn().Err(loginErr).Msg("authClientConn.Invoke: request failed, refresh failed, login failed")
 					return err
@@ -128,10 +123,9 @@ func (cc *ClientConnWithAuth) invoke(ctx context.Context, method string, args an
 		}
 		log.Debug().Msg("authClientConn.Invoke: successfully refresh token")
 
-		md["accessjwt"] = []string{cc.authManager.GetAccessToken()}
-		ctx = metadata.NewOutgoingContext(ctx, md)
+		sendCtx = metadata.NewOutgoingContext(ctx, metadataWithToken(ctx, cc.authManager.GetAccessToken()))
 
-		return cc.invoke(ctx, method, args, reply, retries, opts...)
+		return cc.invoke(sendCtx, method, args, reply, retries, opts...)
 	}
 
 	return err
@@ -147,6 +141,17 @@ func isTokenInvalidOrExpiredFromError(err error) bool {
 
 func isUserNotFoundFromError(err error) bool {
 	return strings.Contains(err.Error(), userNotFound)
+}
+
+func metadataWithToken(ctx context.Context, token string) metadata.MD {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return metadata.MD{
+			"accessjwt": []string{token},
+		}
+	}
+	md["accessJwt"] = []string{token}
+	return md
 }
 
 const (
