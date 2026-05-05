@@ -34,6 +34,27 @@ func (r *BasePgRepository) Create(ctx context.Context, row Row) error {
 	return err
 }
 
+func (r *BasePgRepository) Insert(ctx context.Context, rows ...Row) error {
+	if len(rows) == 0 {
+		return nil
+	}
+	r0 := rows[0]
+	stmt := sq.Insert(r0.Table()).
+		PlaceholderFormat(sq.Dollar).
+		Columns(r0.Columns()...)
+
+	for _, row := range rows {
+		stmt = stmt.Values(row.Values()...)
+	}
+	sql, args, err := stmt.ToSql()
+	if err != nil {
+		return err
+	}
+
+	_, err = r.Exec(ctx, sql, args...)
+	return err
+}
+
 func (r *BasePgRepository) GetOne(ctx context.Context, row Row, condition sq.Sqlizer) error {
 	stmt, args, err := sq.Select(row.Columns()...).
 		From(row.Table()).
