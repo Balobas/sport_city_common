@@ -2,7 +2,6 @@ package authInterceptor
 
 import (
 	"context"
-	"strconv"
 	"strings"
 	"time"
 
@@ -49,9 +48,9 @@ func UnaryAuthInterceptor(withoutAuthMethods map[string]struct{}) grpc.UnaryServ
 			return nil, status.Error(codes.Unauthenticated, err.Error())
 		}
 
-		log.Info().Msgf("user %s successfully verified", callerInfo.UserUid)
+		log.Info().Msgf("user %s successfully verified", callerInfo.Uid)
 
-		log = log.With().Str("callerUserUid", callerInfo.UserUid.String()).Logger()
+		log = log.With().Str("callerUid", callerInfo.Uid.String()).Logger()
 		ctx = logger.ContextWithLogger(ctx, log)
 
 		return handler(contextWithCallerInfo(ctx, callerInfo), req)
@@ -68,18 +67,21 @@ func parseAndVerifyToken(ctx context.Context, tokenStr string) (CallerInfo, erro
 	}
 	claims, _ := token.Claims.(jwt.MapClaims)
 
-	isSystem := false
-	isSystemVal, ok := claims["is_system"]
-	if ok {
-		isSystem, _ = strconv.ParseBool(isSystemVal.(string))
+	tokenTypeVal, ok := claims["type"]
+	if !ok {
+		return CallerInfo{}, errors.New(grpcErrors.AuthErrMsgInvalidToken)
 	}
-
-	if isSystem {
+	tokenType := tokenTypeVal.(string)
+	if tokenType == tokenTypeSystem {
 		return parseSystemToken(log, claims)
 	}
 
 	return parseUserToken(log, claims)
 }
+
+const (
+	tokenTypeSystem = "system"
+)
 
 func parseUserToken(log zerolog.Logger, claims jwt.MapClaims) (CallerInfo, error) {
 	userUidStr, ok := claims["user_uid"]
@@ -138,7 +140,7 @@ func parseUserToken(log zerolog.Logger, claims jwt.MapClaims) (CallerInfo, error
 	}
 
 	return CallerInfo{
-		UserUid:   userUid,
+		Uid:       userUid,
 		DeviceUid: deviceUid,
 		Roles:     rolesStrs,
 		IsSystem:  false,
@@ -214,7 +216,7 @@ func parseSystemToken(log zerolog.Logger, claims jwt.MapClaims) (CallerInfo, err
 	}
 
 	return CallerInfo{
-		UserUid:   serviceUid,
+		Uid:       serviceUid,
 		DeviceUid: deviceUid,
 		Roles:     rolesStrs,
 		IsSystem:  true,
@@ -237,7 +239,7 @@ func CallerInfoFromContext(ctx context.Context) CallerInfo {
 }
 
 type CallerInfo struct {
-	UserUid   uuid.UUID
+	Uid       uuid.UUID //userUid for user token, service uid for system token
 	DeviceUid uuid.UUID
 	Roles     []string
 	IsSystem  bool
