@@ -1,0 +1,46 @@
+syntax="proto3";
+
+package auth_internal_api;
+
+option go_package = "github.com/balobas/auth_service/pkg/auth_internal_api;auth_internal_api";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+
+service AuthInternalApi {
+    rpc ServiceRegister(ServiceRegisterRequest) returns (google.protobuf.Empty);
+    rpc ServiceLogin(ServiceLoginRequest) returns (JwtResponse);
+    rpc ServiceRefresh(ServiceRefreshRequest) returns (JwtResponse);
+}
+
+message ServiceRegisterRequest {
+    string uid  = 1;
+    string name = 2;
+    string domain = 3;
+    string password = 4;
+}
+
+message ServiceLoginRequest {
+    string uid = 1;
+    string password = 2;
+    Device device = 3;
+}
+
+message Device {
+    string uid = 1;
+    string user_uid = 2;
+    string name  =  3;
+    string agent = 4;
+    string language = 5;
+    google.protobuf.Timestamp created_at = 6;
+}
+
+message JwtResponse {
+    string accessJwt = 1;
+    string refreshJwt = 2;
+}
+
+message ServiceRefreshRequest {
+    string refreshJwt = 1;
+}

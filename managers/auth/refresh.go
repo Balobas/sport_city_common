@@ -3,8 +3,7 @@ package authManager
 import (
 	"context"
 
-	auth_v1 "github.com/balobas/sport_city_common/api/auth_service_v1"
-	"github.com/pkg/errors"
+	"github.com/balobas/sport_city_common/api/auth_internal_api"
 )
 
 // TODO: singleFlight
@@ -13,11 +12,11 @@ func (cm *ClientsAuthManager) Refresh(ctx context.Context) error {
 	refreshJwt := cm.refreshJwt
 	cm.mu.RUnlock()
 
-	resp, err := cm.client.Refresh(ctx, &auth_v1.RefreshRequest{
+	resp, err := cm.client.ServiceRefresh(ctx, &auth_internal_api.ServiceRefreshRequest{
 		RefreshJwt: refreshJwt,
 	})
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	cm.mu.Lock()

@@ -184,6 +184,18 @@ func parseSystemToken(log zerolog.Logger, claims jwt.MapClaims) (CallerInfo, err
 		return CallerInfo{}, errors.New(grpcErrors.AuthErrMsgInvalidToken)
 	}
 
+	serviceNameVal, ok := claims["service_name"]
+	if !ok {
+		log.Debug().Msg("auth interceptor: invalid jwt: service_name is empty")
+		return CallerInfo{}, errors.New(grpcErrors.AuthErrMsgInvalidToken)
+	}
+
+	serviceName, ok := serviceNameVal.(string)
+	if !ok {
+		log.Debug().Msg("auth interceptor: invalid jwt: service_name is invalid")
+		return CallerInfo{}, errors.New(grpcErrors.AuthErrMsgInvalidToken)
+	}
+
 	roles, ok := claims["roles"]
 	if !ok {
 		return CallerInfo{}, errors.New("empty roles in token")
@@ -216,11 +228,12 @@ func parseSystemToken(log zerolog.Logger, claims jwt.MapClaims) (CallerInfo, err
 	}
 
 	return CallerInfo{
-		Uid:       serviceUid,
-		DeviceUid: deviceUid,
-		Roles:     rolesStrs,
-		IsSystem:  true,
-		Domain:    domain,
+		Uid:         serviceUid,
+		DeviceUid:   deviceUid,
+		Roles:       rolesStrs,
+		IsSystem:    true,
+		Domain:      domain,
+		ServiceName: serviceName,
 	}, nil
 }
 
@@ -239,9 +252,10 @@ func CallerInfoFromContext(ctx context.Context) CallerInfo {
 }
 
 type CallerInfo struct {
-	Uid       uuid.UUID //userUid for user token, service uid for system token
-	DeviceUid uuid.UUID
-	Roles     []string
-	IsSystem  bool
-	Domain    string
+	Uid         uuid.UUID //userUid for user token, service uid for system token
+	DeviceUid   uuid.UUID
+	Roles       []string
+	IsSystem    bool
+	Domain      string
+	ServiceName string
 }

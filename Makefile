@@ -18,3 +18,12 @@ generate-auth-client:
 	--go-grpc_out=api/auth_service_v1 --go-grpc_opt=paths=source_relative \
 	--plugin=protoc-gen-go-grpc=bin/protoc-gen-go-grpc \
 	api/proto/auth_api_v1.proto
+
+gen-auth-internal-api:
+	mkdir -p api/auth_internal_api
+	protoc --proto_path api/proto \
+	--go_out=api/auth_internal_api --go_opt=paths=source_relative \
+	--plugin=protoc-gen-go=bin/protoc-gen-go \
+	--go-grpc_out=api/auth_internal_api --go-grpc_opt=paths=source_relative \
+	--plugin=protoc-gen-go-grpc=bin/protoc-gen-go-grpc \
+	api/proto/auth_internal_api.proto

@@ -3,7 +3,7 @@ package authManager
 import (
 	"sync"
 
-	auth_v1 "github.com/balobas/sport_city_common/api/auth_service_v1"
+	"github.com/balobas/sport_city_common/api/auth_internal_api"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 	"google.golang.org/grpc"
@@ -13,7 +13,7 @@ import (
 type ClientsAuthManager struct {
 	cfg    Config
 	cc     *grpc.ClientConn
-	client auth_v1.AuthClient
+	client auth_internal_api.AuthInternalApiClient
 
 	mu         *sync.RWMutex
 	accessJwt  string
@@ -21,7 +21,9 @@ type ClientsAuthManager struct {
 }
 
 type Config interface {
-	ServiceCreds() (email string, pwd string)
+	ServiceCreds() (uid string, pwd string)
+	ServiceName() string
+	ServiceDomain() string
 	AuthServiceGrpcAddress() string
 	ServiceDeviceUid() uuid.UUID
 	ServiceDeviceName() string
@@ -38,7 +40,7 @@ func New(
 	return &ClientsAuthManager{
 		cfg:    cfg,
 		cc:     cc,
-		client: auth_v1.NewAuthClient(cc),
+		client: auth_internal_api.NewAuthInternalApiClient(cc),
 		mu:     &sync.RWMutex{},
 	}, nil
 }

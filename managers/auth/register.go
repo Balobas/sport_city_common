@@ -3,19 +3,20 @@ package authManager
 import (
 	"context"
 
-	auth_v1 "github.com/balobas/sport_city_common/api/auth_service_v1"
-	"github.com/pkg/errors"
+	"github.com/balobas/sport_city_common/api/auth_internal_api"
 )
 
 func (cm *ClientsAuthManager) Register(ctx context.Context) error {
-	email, pwd := cm.cfg.ServiceCreds()
+	uid, pwd := cm.cfg.ServiceCreds()
 
-	_, err := cm.client.Register(ctx, &auth_v1.RegisterRequest{
-		Email:    email,
+	_, err := cm.client.ServiceRegister(ctx, &auth_internal_api.ServiceRegisterRequest{
+		Uid:      uid,
+		Name:     cm.cfg.ServiceName(),
+		Domain:   cm.cfg.ServiceDomain(),
 		Password: pwd,
 	})
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	return nil
