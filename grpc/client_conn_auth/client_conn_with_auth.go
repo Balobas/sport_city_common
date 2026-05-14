@@ -146,9 +146,9 @@ func isUserNotFoundFromError(err error) bool {
 func metadataWithToken(ctx context.Context, token string) metadata.MD {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return metadata.MD{
-			"accessjwt": []string{token},
-		}
+		md = metadata.New(map[string]string{
+			"accessJwt": token,
+		})
 	}
 	md["accessJwt"] = []string{token}
 	return md
