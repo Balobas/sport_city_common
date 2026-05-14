@@ -19,7 +19,7 @@ import (
 
 func UnaryAuthInterceptor(withoutAuthMethods map[string]struct{}) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		log := logger.From(ctx)
+		log := logger.Logger()
 
 		if _, allowWithoutAuth := withoutAuthMethods[info.FullMethod]; allowWithoutAuth {
 			log.Debug().Msgf("method %s allowed without auth", info.FullMethod)
