@@ -147,13 +147,14 @@ func metadataWithToken(ctx context.Context, token string) metadata.MD {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		md = metadata.New(map[string]string{
-			"accessJwt": token,
+			accessJwtKey: token,
 		})
 	}
-	md["accessJwt"] = []string{token}
+	md[accessJwtKey] = []string{token}
 	return md
 }
 
 const (
 	userNotFound = "not found"
+	accessJwtKey = "accessjwt"
 )
