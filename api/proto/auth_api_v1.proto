@@ -17,6 +17,7 @@ service Auth {
 
     rpc Login(LoginRequest) returns (JwtResponse);
     rpc Logout(LogoutRequest) returns (google.protobuf.Empty); // required accessJwt in ctx
+    rpc LogoutAllOtherDevices(google.protobuf.Empty) returns (google.protobuf.Empty);
     rpc Refresh(RefreshRequest) returns (JwtResponse);
 
     rpc Verify(VerifyRequest) returns (google.protobuf.Empty);
