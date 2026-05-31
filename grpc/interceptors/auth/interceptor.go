@@ -119,7 +119,7 @@ func parseUserToken(log zerolog.Logger, claims jwt.MapClaims) (CallerInfo, error
 	}
 	var rolesStrs []string
 	if len(rolesStr) != 0 {
-		rolesStrs = strings.Split(rolesStr, "")
+		rolesStrs = strings.Split(rolesStr, ",")
 	}
 
 	expiredStr, ok := claims["expired_at"]
@@ -207,7 +207,7 @@ func parseSystemToken(log zerolog.Logger, claims jwt.MapClaims) (CallerInfo, err
 	}
 	var rolesStrs []string
 	if len(rolesStr) != 0 {
-		rolesStrs = strings.Split(rolesStr, "")
+		rolesStrs = strings.Split(rolesStr, ",")
 	}
 
 	expiredStr, ok := claims["expired_at"]
